@@ -1,6 +1,11 @@
 import 'dart:io';
 
-void main() async {
+bool _verbose = false;
+
+void main(List<String> args) async {
+  // Verificar flag --verbose
+  _verbose = args.contains('--verbose');
+
   // Ejecutar comandos en orden
   await _ejecutarDartAnalyze();
   await _ejecutarRunnerSeed();
@@ -15,19 +20,21 @@ Future<void> _ejecutarDartAnalyze() async {
       runInShell: true,
     );
 
-    stdout.write(result.stdout);
-    if (result.stderr.isNotEmpty) {
-      stderr.write(result.stderr);
+    if (_verbose || result.exitCode != 0) {
+      stdout.write(result.stdout);
+      if (result.stderr.isNotEmpty) {
+        stderr.write(result.stderr);
+      }
     }
 
     if (result.exitCode == 0) {
-      print('[OK] analyze\n');
+      print('[OK] analyze');
     } else {
-      print('[ERROR] analyze (exit code: ${result.exitCode})\n');
+      print('[ERROR] analyze (exit code: ${result.exitCode})');
       exit(result.exitCode);
     }
   } catch (e) {
-    print('[ERROR] analyze: $e\n');
+    print('[ERROR] analyze: $e');
     exit(1);
   }
 }
@@ -40,19 +47,21 @@ Future<void> _ejecutarRunnerSeed() async {
       runInShell: true,
     );
 
-    stdout.write(result.stdout);
-    if (result.stderr.isNotEmpty) {
-      stderr.write(result.stderr);
+    if (_verbose || result.exitCode != 0) {
+      stdout.write(result.stdout);
+      if (result.stderr.isNotEmpty) {
+        stderr.write(result.stderr);
+      }
     }
 
     if (result.exitCode == 0) {
-      print('[OK] seed\n');
+      print('[OK] seed');
     } else {
-      print('[ERROR] seed (exit code: ${result.exitCode})\n');
+      print('[ERROR] seed (exit code: ${result.exitCode})');
       exit(result.exitCode);
     }
   } catch (e) {
-    print('[ERROR] seed: $e\n');
+    print('[ERROR] seed: $e');
     exit(1);
   }
 }
@@ -65,19 +74,21 @@ Future<void> _ejecutarRunnerScenarioSmoke() async {
       runInShell: true,
     );
 
-    stdout.write(result.stdout);
-    if (result.stderr.isNotEmpty) {
-      stderr.write(result.stderr);
+    if (_verbose || result.exitCode != 0) {
+      stdout.write(result.stdout);
+      if (result.stderr.isNotEmpty) {
+        stderr.write(result.stderr);
+      }
     }
 
     if (result.exitCode == 0) {
-      print('[OK] smoke\n');
+      print('[OK] smoke');
     } else {
-      print('[ERROR] smoke (exit code: ${result.exitCode})\n');
+      print('[ERROR] smoke (exit code: ${result.exitCode})');
       exit(result.exitCode);
     }
   } catch (e) {
-    print('[ERROR] smoke: $e\n');
+    print('[ERROR] smoke: $e');
     exit(1);
   }
 }
