@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
 import 'domain/motor_invernadero.dart';
 import 'domain/etapa.dart';
+import 'domain/cultivos.dart';
 import 'dev/dev_seed.dart';
 import 'dev/dev_validaciones.dart';
 import 'dev/dev_config.dart';
+import 'services/app_repository.dart';
+import 'services/bootstrap_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  final motor = MotorInvernadero();
+  final repository = AppRepository(motor);
+  await BootstrapService.ensureSeeded(repository);
+  
   runApp(const MyApp());
 }
 
@@ -82,8 +91,12 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final stockLechuga = motor.calcularStockPorCultivo('lechuga');
-    final stockTomate = motor.calcularStockPorCultivo('tomate');
+    // Calcular stocks usando keys internas
+    final stockLechuga = motor.calcularStockPorCultivo(CultivoKeys.lechuga);
+    final stockCilantro = motor.calcularStockPorCultivo(CultivoKeys.cilantro);
+    final stockAcelga = motor.calcularStockPorCultivo(CultivoKeys.acelga);
+    final stockRucula = motor.calcularStockPorCultivo(CultivoKeys.rucula);
+    final stockPerejil = motor.calcularStockPorCultivo(CultivoKeys.perejil);
     final totalMovimientos = motor.movimientos.length;
     final movimientosAnulados = motor.movimientos.where((m) => m.anulado).length;
 
@@ -186,9 +199,15 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                           ),
                     ),
                     const SizedBox(height: 12),
-                    _buildStockItem('Lechuga', stockLechuga),
+                    _buildStockItem(CultivoLabels.obtenerLabel(CultivoKeys.lechuga), stockLechuga),
                     const SizedBox(height: 8),
-                    _buildStockItem('Tomate', stockTomate),
+                    _buildStockItem(CultivoLabels.obtenerLabel(CultivoKeys.cilantro), stockCilantro),
+                    const SizedBox(height: 8),
+                    _buildStockItem(CultivoLabels.obtenerLabel(CultivoKeys.acelga), stockAcelga),
+                    const SizedBox(height: 8),
+                    _buildStockItem(CultivoLabels.obtenerLabel(CultivoKeys.rucula), stockRucula),
+                    const SizedBox(height: 8),
+                    _buildStockItem(CultivoLabels.obtenerLabel(CultivoKeys.perejil), stockPerejil),
                   ],
                 ),
               ),

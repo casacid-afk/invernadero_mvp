@@ -4,6 +4,7 @@ enum TipoMovimiento {
   siembra,
   traspaso,
   cosecha,
+  corte,
   merma,
 }
 
@@ -15,6 +16,7 @@ class Movimiento {
   final int? cantidad;
   final Etapa? etapaOrigen;
   final Etapa? etapaDestino;
+  final int? numeroCorte; // Solo para tipo corte
   final bool anulado;
 
   Movimiento({
@@ -25,6 +27,7 @@ class Movimiento {
     this.cantidad,
     this.etapaOrigen,
     this.etapaDestino,
+    this.numeroCorte,
     required this.anulado,
   });
 
@@ -37,6 +40,7 @@ class Movimiento {
       'cantidad': cantidad,
       'etapaOrigen': etapaOrigen?.name,
       'etapaDestino': etapaDestino?.name,
+      'numeroCorte': numeroCorte,
       'anulado': anulado,
     };
   }
@@ -60,8 +64,10 @@ class Movimiento {
               (e) => e.name == map['etapaDestino'],
             )
           : null,
+      numeroCorte: map['numeroCorte'] as int?,
       anulado: map['anulado'] as bool,
     );
   }
 }
+
 

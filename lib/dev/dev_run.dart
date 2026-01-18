@@ -1,5 +1,6 @@
 import '../domain/motor_invernadero.dart';
 import '../domain/etapa.dart';
+import '../domain/cultivos.dart';
 import 'dev_seed.dart';
 import 'dev_validaciones.dart';
 
@@ -35,10 +36,13 @@ void main() {
     print('');
   }
 
-  // Calcular stocks
+  // Calcular stocks usando keys internas, mostrar labels bonitos
   print('6. Stock por cultivo:');
-  print('   - Lechuga: ${motor.calcularStockPorCultivo('lechuga')}');
-  print('   - Tomate: ${motor.calcularStockPorCultivo('tomate')}');
+  print('   - ${CultivoLabels.obtenerLabel(CultivoKeys.lechuga)}: ${motor.calcularStockPorCultivo(CultivoKeys.lechuga)}');
+  print('   - ${CultivoLabels.obtenerLabel(CultivoKeys.cilantro)}: ${motor.calcularStockPorCultivo(CultivoKeys.cilantro)}');
+  print('   - ${CultivoLabels.obtenerLabel(CultivoKeys.acelga)}: ${motor.calcularStockPorCultivo(CultivoKeys.acelga)}');
+  print('   - ${CultivoLabels.obtenerLabel(CultivoKeys.rucula)}: ${motor.calcularStockPorCultivo(CultivoKeys.rucula)}');
+  print('   - ${CultivoLabels.obtenerLabel(CultivoKeys.perejil)}: ${motor.calcularStockPorCultivo(CultivoKeys.perejil)}');
   print('');
 
   print('7. Stock por etapa:');
