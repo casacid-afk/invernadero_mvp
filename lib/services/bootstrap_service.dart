@@ -18,6 +18,11 @@ class BootstrapService {
     // Guardar flag de seeded
     await prefs.setBool(_seededKey, true);
   }
+
+  /// Carga cierres de jornada desde Firestore al motor
+  static Future<void> cargarCierres(AppRepository repo) async {
+    await repo.motor.cargarCierresDesdeFirestore();
+  }
 }
 
 

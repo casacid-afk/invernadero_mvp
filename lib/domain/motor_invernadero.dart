@@ -3,16 +3,36 @@ import 'movimiento.dart';
 import 'etapa.dart';
 import 'cultivos.dart';
 import 'cierre_jornada.dart';
+import '../services/firestore_cierres_service.dart';
 
 class MotorInvernadero {
   final List<Lote> _lotes = [];
   final List<Movimiento> _movimientos = [];
   final List<CierreJornada> _cierresJornada = [];
   int _contadorId = 0;
+  FirestoreCierresService? _firestoreService;
 
   List<Lote> get lotes => List.unmodifiable(_lotes);
   List<Movimiento> get movimientos => List.unmodifiable(_movimientos);
   List<CierreJornada> get cierresJornada => List.unmodifiable(_cierresJornada);
+
+  /// Configura el servicio de Firestore para persistencia de cierres
+  void configurarFirestore(FirestoreCierresService service) {
+    _firestoreService = service;
+  }
+
+  /// Carga cierres desde Firestore al motor
+  Future<void> cargarCierresDesdeFirestore() async {
+    if (_firestoreService == null) return;
+
+    try {
+      final cierres = await _firestoreService!.cargarCierres();
+      _cierresJornada.clear();
+      _cierresJornada.addAll(cierres);
+    } catch (e) {
+      // Si falla, mantener cierres en memoria (fallback)
+    }
+  }
 
   Lote obtenerLote(String id) {
     return _lotes.firstWhere(
@@ -563,12 +583,12 @@ class MotorInvernadero {
   }
 
   /// Cierra la jornada de una fecha específica guardando un snapshot de las ventas del día
-  CierreJornada cerrarJornada({
+  Future<CierreJornada> cerrarJornada({
     required DateTime fecha,
     required int cantidadVentas,
     required int unidadesVendidas,
     required double totalDolares,
-  }) {
+  }) async {
     // Verificar si ya existe un cierre para esta fecha
     final fechaInicio = DateTime(fecha.year, fecha.month, fecha.day);
     final fechaFin = fechaInicio.add(const Duration(days: 1));
@@ -582,6 +602,14 @@ class MotorInvernadero {
       throw StateError('Ya existe un cierre de jornada para esta fecha');
     }
 
+    // Verificar en Firestore si está configurado
+    if (_firestoreService != null) {
+      final existeCierreFirestore = await _firestoreService!.existeCierre(fechaInicio);
+      if (existeCierreFirestore) {
+        throw StateError('Ya existe un cierre de jornada para esta fecha');
+      }
+    }
+
     final cierre = CierreJornada(
       id: _generarIdCierre(),
       fecha: fechaInicio,
@@ -590,23 +618,42 @@ class MotorInvernadero {
       totalDolares: totalDolares,
     );
 
+    // Guardar en memoria
     _cierresJornada.add(cierre);
+
+    // Guardar en Firestore si está configurado
+    if (_firestoreService != null) {
+      try {
+        await _firestoreService!.guardarCierre(cierre);
+      } catch (e) {
+        // Si falla Firestore, el cierre queda en memoria (fallback)
+      }
+    }
+
     return cierre;
   }
 
   /// Cierra la jornada calculando automáticamente los valores del día
-  CierreJornada cerrarJornadaAutomatico(DateTime fecha) {
+  Future<CierreJornada> cerrarJornadaAutomatico(DateTime fecha) async {
     final fechaInicio = DateTime(fecha.year, fecha.month, fecha.day);
     final fechaFin = fechaInicio.add(const Duration(days: 1));
 
-    // Verificar si ya existe un cierre para esta fecha
-    final existeCierre = _cierresJornada.any(
+    // Verificar si ya existe un cierre para esta fecha (en memoria y Firestore)
+    final existeCierreMemoria = _cierresJornada.any(
       (cierre) => cierre.fecha.isAfter(fechaInicio.subtract(const Duration(milliseconds: 1))) &&
                   cierre.fecha.isBefore(fechaFin),
     );
 
-    if (existeCierre) {
+    if (existeCierreMemoria) {
       throw StateError('Ya existe un cierre de jornada para esta fecha');
+    }
+
+    // Verificar en Firestore si está configurado
+    if (_firestoreService != null) {
+      final existeCierreFirestore = await _firestoreService!.existeCierre(fechaInicio);
+      if (existeCierreFirestore) {
+        throw StateError('Ya existe un cierre de jornada para esta fecha');
+      }
     }
 
     // Calcular valores del día
@@ -636,7 +683,18 @@ class MotorInvernadero {
       totalDolares: totalDolares,
     );
 
+    // Guardar en memoria
     _cierresJornada.add(cierre);
+
+    // Guardar en Firestore si está configurado
+    if (_firestoreService != null) {
+      try {
+        await _firestoreService!.guardarCierre(cierre);
+      } catch (e) {
+        // Si falla Firestore, el cierre queda en memoria (fallback)
+      }
+    }
+
     return cierre;
   }
 

@@ -279,11 +279,11 @@ class _ReportesScreenState extends State<ReportesScreen> {
     );
   }
 
-  void _cerrarJornada() {
+  void _cerrarJornada() async {
     final reporte = _calcularReporte();
     
     try {
-      widget.motor.cerrarJornadaAutomatico(_fechaSeleccionada);
+      await widget.motor.cerrarJornadaAutomatico(_fechaSeleccionada);
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

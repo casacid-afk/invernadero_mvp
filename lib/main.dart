@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'domain/motor_invernadero.dart';
 import 'domain/etapa.dart';
 import 'domain/cultivos.dart';
@@ -7,15 +8,35 @@ import 'dev/dev_validaciones.dart';
 import 'dev/dev_config.dart';
 import 'services/app_repository.dart';
 import 'services/bootstrap_service.dart';
+import 'services/firestore_cierres_service.dart';
 import 'screens/ventas_screen.dart';
 import 'screens/reportes_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Inicializar Firebase
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    // Si falla Firebase, continuar sin Firestore (modo offline)
+  }
+  
   final motor = MotorInvernadero();
   final repository = AppRepository(motor);
+  
+  // Configurar Firestore para cierres (si Firebase está disponible)
+  try {
+    final firestoreService = FirestoreCierresService(invernaderoId: 'invernadero_principal');
+    motor.configurarFirestore(firestoreService);
+  } catch (e) {
+    // Si falla, continuar sin Firestore (fallback a memoria)
+  }
+  
   await BootstrapService.ensureSeeded(repository);
+  
+  // Cargar cierres desde Firestore
+  await BootstrapService.cargarCierres(repository);
   
   runApp(const MyApp());
 }
