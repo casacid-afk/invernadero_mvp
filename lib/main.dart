@@ -206,6 +206,99 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
     return siembras7Dias / ventasPromedio;
   }
 
+  /// Calcula las siembras de los últimos 7 días para un cultivo específico
+  int _calcularSiembras7DiasPorCultivo(String cultivoKey) {
+    final hoy = DateTime.now();
+    final inicioHoy = DateTime(hoy.year, hoy.month, hoy.day);
+    final finHoy = inicioHoy.add(const Duration(days: 1));
+    final inicio7DiasAtras = inicioHoy.subtract(const Duration(days: 6));
+
+    return motor.movimientos
+        .where((movimiento) =>
+            movimiento.tipo == TipoMovimiento.siembra &&
+            !movimiento.anulado &&
+            movimiento.fecha.isAfter(inicio7DiasAtras.subtract(const Duration(milliseconds: 1))) &&
+            movimiento.fecha.isBefore(finHoy))
+        .map((movimiento) {
+          try {
+            final lote = motor.obtenerLote(movimiento.loteId);
+            return lote.cultivoKey == cultivoKey ? movimiento.cantidad ?? 0 : 0;
+          } catch (e) {
+            return 0;
+          }
+        })
+        .fold(0, (suma, cantidad) => suma + cantidad);
+  }
+
+  /// Calcula el promedio diario de ventas de los últimos 30 días para un cultivo específico
+  double _calcularVentasPromedioDiario30DiasPorCultivo(String cultivoKey) {
+    final hoy = DateTime.now();
+    final inicioHoy = DateTime(hoy.year, hoy.month, hoy.day);
+    final finHoy = inicioHoy.add(const Duration(days: 1));
+    final inicio30DiasAtras = inicioHoy.subtract(const Duration(days: 29));
+
+    final ventas30Dias = motor.movimientos
+        .where((movimiento) =>
+            movimiento.tipo == TipoMovimiento.venta &&
+            !movimiento.anulado &&
+            movimiento.fecha.isAfter(inicio30DiasAtras.subtract(const Duration(milliseconds: 1))) &&
+            movimiento.fecha.isBefore(finHoy))
+        .map((movimiento) {
+          try {
+            final lote = motor.obtenerLote(movimiento.loteId);
+            return lote.cultivoKey == cultivoKey ? movimiento.cantidad ?? 0 : 0;
+          } catch (e) {
+            return 0;
+          }
+        })
+        .fold(0, (suma, cantidad) => suma + cantidad);
+
+    return ventas30Dias / 30.0;
+  }
+
+  /// Calcula la cobertura en días para un cultivo específico
+  double? _calcularCoberturaPorCultivo(String cultivoKey) {
+    final ventasPromedio = _calcularVentasPromedioDiario30DiasPorCultivo(cultivoKey);
+    if (ventasPromedio <= 0) {
+      return null; // Evitar división por 0
+    }
+    final siembras7Dias = _calcularSiembras7DiasPorCultivo(cultivoKey);
+    return siembras7Dias / ventasPromedio;
+  }
+
+  /// Obtiene la lista de coberturas por cultivo (solo cultivos con ventas > 0)
+  /// Ordenada por menor cobertura primero (más riesgoso arriba)
+  List<MapEntry<String, double>> _obtenerCoberturasPorCultivo() {
+    final coberturas = <String, double>{};
+
+    // Obtener cultivos únicos de los movimientos
+    final cultivosConVentas = <String>{};
+    for (final movimiento in motor.movimientos) {
+      if (movimiento.tipo == TipoMovimiento.venta && !movimiento.anulado) {
+        try {
+          final lote = motor.obtenerLote(movimiento.loteId);
+          cultivosConVentas.add(lote.cultivoKey);
+        } catch (e) {
+          // Ignorar si no se puede obtener el lote
+        }
+      }
+    }
+
+    // Calcular cobertura solo para cultivos con ventas
+    for (final cultivoKey in cultivosConVentas) {
+      final cobertura = _calcularCoberturaPorCultivo(cultivoKey);
+      if (cobertura != null) {
+        coberturas[cultivoKey] = cobertura;
+      }
+    }
+
+    // Ordenar por menor cobertura primero
+    final entradas = coberturas.entries.toList();
+    entradas.sort((a, b) => a.value.compareTo(b.value));
+
+    return entradas;
+  }
+
   @override
   Widget build(BuildContext context) {
     // Calcular stocks usando keys internas
@@ -357,15 +450,8 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                                     color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                                   ),
                             ),
-                            if (_calcularCobertura() != null) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                'Cobertura: ~${_calcularCobertura()!.toStringAsFixed(1)} días',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                                    ),
-                              ),
-                            ],
+                            const SizedBox(height: 4),
+                            _buildCoberturaPorCultivo(),
                           ],
                         ),
                       ),
@@ -656,6 +742,36 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
               ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCoberturaPorCultivo() {
+    final coberturas = _obtenerCoberturasPorCultivo();
+
+    if (coberturas.isEmpty) {
+      return Text(
+        'Cobertura por cultivo: sin ventas (30d)',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
+      );
+    }
+
+    // Limitar a 2-4 líneas máximo
+    final maxCultivos = (coberturas.length > 4) ? 4 : coberturas.length;
+    final cultivosAMostrar = coberturas.take(maxCultivos).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: cultivosAMostrar.map((entry) {
+        final label = CultivoLabels.obtenerLabel(entry.key);
+        return Text(
+          '$label: ~${entry.value.toStringAsFixed(0)}d',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              ),
+        );
+      }).toList(),
     );
   }
 }
