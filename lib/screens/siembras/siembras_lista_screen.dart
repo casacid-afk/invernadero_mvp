@@ -138,6 +138,45 @@ class _SiembrasListaScreenState extends State<SiembrasListaScreen> {
     }).length;
   }
 
+  Map<String, Map<String, int>> _calcularBreakdownPorCultivo(List<Movimiento> siembras) {
+    final ahora = DateTime.now();
+    final hace7Dias = ahora.subtract(const Duration(days: 7));
+    final inicioMes = DateTime(ahora.year, ahora.month, 1);
+
+    final breakdown = <String, Map<String, int>>{};
+
+    for (final movimiento in siembras) {
+      String cultivoKey = 'desconocido';
+      try {
+        final lote = widget.motor.lotes.firstWhere(
+          (l) => l.id == movimiento.loteId,
+        );
+        cultivoKey = lote.cultivoKey;
+      } catch (_) {
+        // cultivoKey ya está en 'desconocido'
+      }
+
+      if (!breakdown.containsKey(cultivoKey)) {
+        breakdown[cultivoKey] = {'7d': 0, 'mes': 0};
+      }
+
+      final stats = breakdown[cultivoKey]!;
+
+      // Contar 7 días
+      if (movimiento.fecha.isAfter(hace7Dias) || movimiento.fecha.isAtSameMomentAs(hace7Dias)) {
+        stats['7d'] = stats['7d']! + 1;
+      }
+
+      // Contar mes
+      if (movimiento.fecha.isAfter(inicioMes.subtract(const Duration(milliseconds: 1))) ||
+          movimiento.fecha.isAtSameMomentAs(inicioMes)) {
+        stats['mes'] = stats['mes']! + 1;
+      }
+    }
+
+    return breakdown;
+  }
+
   @override
   Widget build(BuildContext context) {
     final siembras = _aplicarFiltros();
@@ -309,6 +348,77 @@ class _SiembrasListaScreenState extends State<SiembrasListaScreen> {
                 ),
               ],
             ),
+          ),
+          // Breakdown por cultivo
+          Builder(
+            builder: (context) {
+              final breakdown = _calcularBreakdownPorCultivo(siembras);
+              if (breakdown.isEmpty) {
+                return const SizedBox.shrink();
+              }
+
+              // Ordenar por total de eventos (descendente)
+              final cultivosOrdenados = breakdown.entries.toList()
+                ..sort((a, b) {
+                  final totalA = a.value['7d']! + a.value['mes']!;
+                  final totalB = b.value['7d']! + b.value['mes']!;
+                  return totalB.compareTo(totalA);
+                });
+
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Por Cultivo',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    ...cultivosOrdenados.map((entry) {
+                      final cultivoKey = entry.key;
+                      final stats = entry.value;
+                      final cultivoLabel = cultivoKey == 'desconocido'
+                          ? 'Cultivo desconocido'
+                          : CultivoLabels.obtenerLabel(cultivoKey);
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                cultivoLabel,
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Chip(
+                              label: Text('7d: ${stats['7d']}'),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            const SizedBox(width: 4),
+                            Chip(
+                              label: Text('Mes: ${stats['mes']}'),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              );
+            },
           ),
           // Lista de siembras
           Expanded(
