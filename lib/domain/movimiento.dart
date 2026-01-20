@@ -6,6 +6,13 @@ enum TipoMovimiento {
   cosecha,
   corte,
   merma,
+  venta,
+}
+
+enum MedioPago {
+  efectivo,
+  transferencia,
+  credito,
 }
 
 class Movimiento {
@@ -17,6 +24,8 @@ class Movimiento {
   final Etapa? etapaOrigen;
   final Etapa? etapaDestino;
   final int? numeroCorte; // Solo para tipo corte
+  final double? precioUnitario; // Solo para tipo venta
+  final MedioPago? medioPago; // Solo para tipo venta
   final bool anulado;
 
   Movimiento({
@@ -28,6 +37,8 @@ class Movimiento {
     this.etapaOrigen,
     this.etapaDestino,
     this.numeroCorte,
+    this.precioUnitario,
+    this.medioPago,
     required this.anulado,
   });
 
@@ -41,6 +52,8 @@ class Movimiento {
       'etapaOrigen': etapaOrigen?.name,
       'etapaDestino': etapaDestino?.name,
       'numeroCorte': numeroCorte,
+      'precioUnitario': precioUnitario,
+      'medioPago': medioPago?.name,
       'anulado': anulado,
     };
   }
@@ -65,6 +78,12 @@ class Movimiento {
             )
           : null,
       numeroCorte: map['numeroCorte'] as int?,
+      precioUnitario: map['precioUnitario'] as double?,
+      medioPago: map['medioPago'] != null
+          ? MedioPago.values.firstWhere(
+              (e) => e.name == map['medioPago'],
+            )
+          : null,
       anulado: map['anulado'] as bool,
     );
   }

@@ -7,6 +7,7 @@ import 'dev/dev_validaciones.dart';
 import 'dev/dev_config.dart';
 import 'services/app_repository.dart';
 import 'services/bootstrap_service.dart';
+import 'screens/ventas_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -110,6 +111,62 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Botón para ir a ventas
+            Card(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              child: InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => VentasScreen(motor: motor),
+                    ),
+                  ).then((_) {
+                    // Actualizar la pantalla al regresar
+                    setState(() {});
+                  });
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.shopping_cart,
+                        size: 32,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Registrar Venta',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Registrar una nueva venta de cultivos',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             // Selector de escenario (solo en modo DEV)
             if (DEV_MODE) ...[
               DropdownButtonFormField<DevScenario>(

@@ -6,6 +6,7 @@ import 'cultivos.dart';
 class MotorInvernadero {
   final List<Lote> _lotes = [];
   final List<Movimiento> _movimientos = [];
+  int _contadorId = 0;
 
   List<Lote> get lotes => List.unmodifiable(_lotes);
   List<Movimiento> get movimientos => List.unmodifiable(_movimientos);
@@ -407,6 +408,112 @@ class MotorInvernadero {
     return movimiento;
   }
 
+  /// Registra una venta de cultivo: reduce stock desde lotes disponibles en etapa final
+  Movimiento registrarVenta({
+    required String cultivoKey,
+    required int cantidad,
+    required double precioUnitario,
+    required MedioPago medioPago,
+    required DateTime fecha,
+  }) {
+    // Validar cantidad positiva
+    if (cantidad <= 0) {
+      throw ArgumentError('La cantidad a vender debe ser mayor a 0');
+    }
+
+    // Validar precio unitario positivo
+    if (precioUnitario <= 0) {
+      throw ArgumentError('El precio unitario debe ser mayor a 0');
+    }
+
+    // Validar cultivoKey
+    if (!CultivoKeys.todas.contains(cultivoKey)) {
+      throw ArgumentError('Cultivo inválido: $cultivoKey');
+    }
+
+    // Calcular stock disponible del cultivo
+    final stockDisponible = calcularStockPorCultivo(cultivoKey);
+
+    // Validar que haya stock suficiente
+    if (stockDisponible < cantidad) {
+      throw StateError(
+        'Stock insuficiente: disponible $stockDisponible, solicitado $cantidad (bancada_final)',
+      );
+    }
+
+    // Obtener lotes activos del cultivo en etapa final, ordenados por fecha más antigua (FIFO)
+    final lotesDisponibles = _lotes
+        .where((lote) =>
+            lote.activo &&
+            lote.cultivoKey == cultivoKey &&
+            lote.etapaActual == Etapa.bancada_final)
+        .toList()
+      ..sort((a, b) => a.fechaInicioEtapa.compareTo(b.fechaInicioEtapa));
+
+    if (lotesDisponibles.isEmpty) {
+      throw StateError(
+        'No hay lotes disponibles en etapa final para el cultivo $cultivoKey',
+      );
+    }
+
+    // Reducir stock de lotes disponibles hasta cubrir la cantidad solicitada
+    int cantidadRestante = cantidad;
+    final lotesAfectados = <String>[];
+
+    for (final lote in lotesDisponibles) {
+      if (cantidadRestante <= 0) break;
+
+      final loteIndex = _lotes.indexWhere((l) => l.id == lote.id);
+      if (loteIndex == -1) continue;
+
+      final loteActual = _lotes[loteIndex];
+      final cantidadADescontar =
+          cantidadRestante < loteActual.cantidadActual
+              ? cantidadRestante
+              : loteActual.cantidadActual;
+
+      final nuevaCantidad = loteActual.cantidadActual - cantidadADescontar;
+      final nuevoActivo = nuevaCantidad > 0 ? loteActual.activo : false;
+
+      final loteActualizado = Lote(
+        id: loteActual.id,
+        cultivoKey: loteActual.cultivoKey,
+        cantidadActual: nuevaCantidad,
+        etapaActual: loteActual.etapaActual,
+        fechaInicioEtapa: loteActual.fechaInicioEtapa,
+        fechaSiembra: loteActual.fechaSiembra,
+        activo: nuevoActivo,
+        cortesRealizados: loteActual.cortesRealizados,
+      );
+
+      _lotes[loteIndex] = loteActualizado;
+      lotesAfectados.add(loteActual.id);
+      cantidadRestante -= cantidadADescontar;
+    }
+
+    // Registrar movimiento de venta usando el primer lote afectado como referencia
+    final loteReferencia = lotesAfectados.isNotEmpty
+        ? lotesAfectados.first
+        : _lotes
+            .firstWhere((l) =>
+                l.activo && l.cultivoKey == cultivoKey)
+            .id;
+
+    final movimiento = Movimiento(
+      id: _generarIdMovimiento(),
+      loteId: loteReferencia,
+      tipo: TipoMovimiento.venta,
+      fecha: fecha,
+      cantidad: cantidad,
+      precioUnitario: precioUnitario,
+      medioPago: medioPago,
+      anulado: false,
+    );
+
+    _movimientos.add(movimiento);
+    return movimiento;
+  }
+
   void anularMovimiento(String movimientoId) {
     final movimientoIndex = _movimientos.indexWhere(
       (m) => m.id == movimientoId,
@@ -425,6 +532,8 @@ class MotorInvernadero {
       etapaOrigen: movimientoActual.etapaOrigen,
       etapaDestino: movimientoActual.etapaDestino,
       numeroCorte: movimientoActual.numeroCorte,
+      precioUnitario: movimientoActual.precioUnitario,
+      medioPago: movimientoActual.medioPago,
       anulado: true,
     );
 
@@ -446,14 +555,17 @@ class MotorInvernadero {
   void reset() {
     _lotes.clear();
     _movimientos.clear();
+    _contadorId = 0;
   }
 
   String _generarIdMovimiento() {
-    return 'mov_${DateTime.now().millisecondsSinceEpoch}';
+    _contadorId++;
+    return 'mov_${DateTime.now().millisecondsSinceEpoch}_$_contadorId';
   }
 
   String _generarIdLote() {
-    return 'lote_${DateTime.now().millisecondsSinceEpoch}';
+    _contadorId++;
+    return 'lote_${DateTime.now().millisecondsSinceEpoch}_$_contadorId';
   }
 }
 
