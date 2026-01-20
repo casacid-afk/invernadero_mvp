@@ -225,10 +225,60 @@ class _ReportesScreenState extends State<ReportesScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: 24),
+
+            // Botón Cerrar día
+            ElevatedButton.icon(
+              onPressed: _verificarCierreDisponible() ? _cerrarJornada : null,
+              icon: const Icon(Icons.lock),
+              label: const Text('Cerrar Día'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                textStyle: const TextStyle(fontSize: 16),
+              ),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  bool _verificarCierreDisponible() {
+    final fechaInicio = DateTime(_fechaSeleccionada.year, _fechaSeleccionada.month, _fechaSeleccionada.day);
+    final fechaFin = fechaInicio.add(const Duration(days: 1));
+    
+    return !widget.motor.cierresJornada.any(
+      (cierre) => cierre.fecha.isAfter(fechaInicio.subtract(const Duration(milliseconds: 1))) &&
+                  cierre.fecha.isBefore(fechaFin),
+    );
+  }
+
+  void _cerrarJornada() {
+    final reporte = _calcularReporte();
+    
+    try {
+      widget.motor.cerrarJornadaAutomatico(_fechaSeleccionada);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Jornada cerrada: ${reporte['cantidadVentas']} ventas, ${reporte['unidadesVendidas']} unidades, \$${reporte['totalDolares'].toStringAsFixed(2)}',
+          ),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      
+      setState(() {});
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   Widget _buildMetrica(

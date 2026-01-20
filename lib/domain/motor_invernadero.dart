@@ -2,14 +2,17 @@ import 'lote.dart';
 import 'movimiento.dart';
 import 'etapa.dart';
 import 'cultivos.dart';
+import 'cierre_jornada.dart';
 
 class MotorInvernadero {
   final List<Lote> _lotes = [];
   final List<Movimiento> _movimientos = [];
+  final List<CierreJornada> _cierresJornada = [];
   int _contadorId = 0;
 
   List<Lote> get lotes => List.unmodifiable(_lotes);
   List<Movimiento> get movimientos => List.unmodifiable(_movimientos);
+  List<CierreJornada> get cierresJornada => List.unmodifiable(_cierresJornada);
 
   Lote obtenerLote(String id) {
     return _lotes.firstWhere(
@@ -555,7 +558,86 @@ class MotorInvernadero {
   void reset() {
     _lotes.clear();
     _movimientos.clear();
+    _cierresJornada.clear();
     _contadorId = 0;
+  }
+
+  /// Cierra la jornada de una fecha específica guardando un snapshot de las ventas del día
+  CierreJornada cerrarJornada({
+    required DateTime fecha,
+    required int cantidadVentas,
+    required int unidadesVendidas,
+    required double totalDolares,
+  }) {
+    // Verificar si ya existe un cierre para esta fecha
+    final fechaInicio = DateTime(fecha.year, fecha.month, fecha.day);
+    final fechaFin = fechaInicio.add(const Duration(days: 1));
+    
+    final existeCierre = _cierresJornada.any(
+      (cierre) => cierre.fecha.isAfter(fechaInicio.subtract(const Duration(milliseconds: 1))) &&
+                  cierre.fecha.isBefore(fechaFin),
+    );
+    
+    if (existeCierre) {
+      throw StateError('Ya existe un cierre de jornada para esta fecha');
+    }
+
+    final cierre = CierreJornada(
+      id: _generarIdCierre(),
+      fecha: fechaInicio,
+      cantidadVentas: cantidadVentas,
+      unidadesVendidas: unidadesVendidas,
+      totalDolares: totalDolares,
+    );
+
+    _cierresJornada.add(cierre);
+    return cierre;
+  }
+
+  /// Cierra la jornada calculando automáticamente los valores del día
+  CierreJornada cerrarJornadaAutomatico(DateTime fecha) {
+    final fechaInicio = DateTime(fecha.year, fecha.month, fecha.day);
+    final fechaFin = fechaInicio.add(const Duration(days: 1));
+
+    // Verificar si ya existe un cierre para esta fecha
+    final existeCierre = _cierresJornada.any(
+      (cierre) => cierre.fecha.isAfter(fechaInicio.subtract(const Duration(milliseconds: 1))) &&
+                  cierre.fecha.isBefore(fechaFin),
+    );
+
+    if (existeCierre) {
+      throw StateError('Ya existe un cierre de jornada para esta fecha');
+    }
+
+    // Calcular valores del día
+    final ventas = _movimientos.where((movimiento) {
+      return movimiento.tipo == TipoMovimiento.venta &&
+          !movimiento.anulado &&
+          movimiento.fecha.isAfter(fechaInicio.subtract(const Duration(milliseconds: 1))) &&
+          movimiento.fecha.isBefore(fechaFin);
+    }).toList();
+
+    final cantidadVentas = ventas.length;
+    final unidadesVendidas = ventas.fold<int>(
+      0,
+      (suma, venta) => suma + (venta.cantidad ?? 0),
+    );
+    final totalDolares = ventas.fold<double>(
+      0.0,
+      (suma, venta) =>
+          suma + ((venta.cantidad ?? 0) * (venta.precioUnitario ?? 0.0)),
+    );
+
+    final cierre = CierreJornada(
+      id: _generarIdCierre(),
+      fecha: fechaInicio,
+      cantidadVentas: cantidadVentas,
+      unidadesVendidas: unidadesVendidas,
+      totalDolares: totalDolares,
+    );
+
+    _cierresJornada.add(cierre);
+    return cierre;
   }
 
   String _generarIdMovimiento() {
@@ -566,6 +648,11 @@ class MotorInvernadero {
   String _generarIdLote() {
     _contadorId++;
     return 'lote_${DateTime.now().millisecondsSinceEpoch}_$_contadorId';
+  }
+
+  String _generarIdCierre() {
+    _contadorId++;
+    return 'cierre_${DateTime.now().millisecondsSinceEpoch}_$_contadorId';
   }
 }
 
