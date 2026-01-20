@@ -128,6 +128,28 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
         .fold(0, (suma, movimiento) => suma + (movimiento.cantidad ?? 0));
   }
 
+  double _calcularPromedio7Dias() {
+    final hoy = DateTime.now();
+    final inicioHoy = DateTime(hoy.year, hoy.month, hoy.day);
+    final inicio7DiasAtras = inicioHoy.subtract(const Duration(days: 7));
+
+    final siembras7Dias = motor.movimientos
+        .where((movimiento) =>
+            movimiento.tipo == TipoMovimiento.siembra &&
+            !movimiento.anulado &&
+            movimiento.fecha.isAfter(inicio7DiasAtras.subtract(const Duration(milliseconds: 1))) &&
+            movimiento.fecha.isBefore(inicioHoy))
+        .fold(0, (suma, movimiento) => suma + (movimiento.cantidad ?? 0));
+
+    return siembras7Dias / 7.0;
+  }
+
+  bool _debeMostrarAlerta() {
+    final siembrasHoy = _calcularSiembrasHoy();
+    final promedio7Dias = _calcularPromedio7Dias();
+    return siembrasHoy < promedio7Dias;
+  }
+
   @override
   Widget build(BuildContext context) {
     // Calcular stocks usando keys internas
@@ -208,22 +230,62 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                         const SizedBox(height: 12),
                         Align(
                           alignment: Alignment.centerRight,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'Hoy sembrado: $siembrasHoy',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context).colorScheme.primary,
-                                    fontWeight: FontWeight.w500,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'Hoy sembrado: $siembrasHoy',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: Theme.of(context).colorScheme.primary,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                ),
+                              ),
+                              if (_debeMostrarAlerta()) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
                                   ),
-                            ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.orange.withOpacity(0.5),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.warning_amber_rounded,
+                                        size: 16,
+                                        color: Colors.orange.shade700,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Bajo promedio (7d)',
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                              color: Colors.orange.shade700,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                       ],
