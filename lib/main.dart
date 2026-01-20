@@ -11,6 +11,7 @@ import 'services/bootstrap_service.dart';
 import 'services/firestore_cierres_service.dart';
 import 'screens/ventas_screen.dart';
 import 'screens/reportes_screen.dart';
+import 'screens/siembras/siembras_lista_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -235,6 +236,59 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                       Icon(
                         Icons.arrow_forward_ios,
                         color: Theme.of(context).colorScheme.secondary,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Botón para ver siembras
+            Card(
+              color: Theme.of(context).colorScheme.tertiaryContainer,
+              child: InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SiembrasListaScreen(motor: motor),
+                    ),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.spa,
+                        size: 32,
+                        color: Theme.of(context).colorScheme.tertiary,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Siembras',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Ver historial de siembras realizadas',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        color: Theme.of(context).colorScheme.tertiary,
                       ),
                     ],
                   ),

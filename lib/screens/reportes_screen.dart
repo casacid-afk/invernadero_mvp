@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../domain/motor_invernadero.dart';
 import '../domain/movimiento.dart';
-import '../domain/cultivos.dart';
 import 'historial_cierres_screen.dart';
 
 class ReportesScreen extends StatefulWidget {
