@@ -121,6 +121,23 @@ class _SiembrasListaScreenState extends State<SiembrasListaScreen> {
     return siembras;
   }
 
+  int _contarSiembrasSemana(List<Movimiento> siembras) {
+    final ahora = DateTime.now();
+    final hace7Dias = ahora.subtract(const Duration(days: 7));
+    return siembras.where((movimiento) {
+      return movimiento.fecha.isAfter(hace7Dias) || movimiento.fecha.isAtSameMomentAs(hace7Dias);
+    }).length;
+  }
+
+  int _contarSiembrasMes(List<Movimiento> siembras) {
+    final ahora = DateTime.now();
+    final inicioMes = DateTime(ahora.year, ahora.month, 1);
+    return siembras.where((movimiento) {
+      return movimiento.fecha.isAfter(inicioMes.subtract(const Duration(milliseconds: 1))) ||
+          movimiento.fecha.isAtSameMomentAs(inicioMes);
+    }).length;
+  }
+
   @override
   Widget build(BuildContext context) {
     final siembras = _aplicarFiltros();
@@ -230,6 +247,66 @@ class _SiembrasListaScreenState extends State<SiembrasListaScreen> {
                       label: const Text('Limpiar filtros'),
                     ),
                   ),
+              ],
+            ),
+          ),
+          // Header con KPIs
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            color: Theme.of(context).colorScheme.surface,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Card(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Semana',
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${_contarSiembrasSemana(siembras)}',
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Card(
+                    color: Theme.of(context).colorScheme.secondaryContainer,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Mes',
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${_contarSiembrasMes(siembras)}',
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.onSecondaryContainer,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
