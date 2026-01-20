@@ -5,10 +5,8 @@ import '../../domain/movimiento.dart';
 import '../../domain/lote.dart';
 import '../../domain/etapa.dart';
 import '../../domain/cultivos.dart';
-import 'lote_detalle_screen.dart';
-import 'siembra_nueva_screen.dart';
 
-class SiembrasListaScreen extends StatefulWidget {
+class SiembrasListaScreen extends StatelessWidget {
   final MotorInvernadero motor;
 
   const SiembrasListaScreen({
@@ -16,22 +14,7 @@ class SiembrasListaScreen extends StatefulWidget {
     required this.motor,
   });
 
-  @override
-  State<SiembrasListaScreen> createState() => _SiembrasListaScreenState();
-}
-
-class _SiembrasListaScreenState extends State<SiembrasListaScreen> {
-  String? _cultivoFiltro; // null = "Todos"
-  DateTime? _fechaDesde;
-  DateTime? _fechaHasta;
-
-  String _formatearFechaCorta(DateTime fecha) {
-    final dia = fecha.day.toString().padLeft(2, '0');
-    final mes = fecha.month.toString().padLeft(2, '0');
-    return '$dia-$mes';
-  }
-
-  String _formatearFechaCompleta(DateTime fecha) {
+  String _formatearFecha(DateTime fecha) {
     final dia = fecha.day.toString().padLeft(2, '0');
     final mes = fecha.month.toString().padLeft(2, '0');
     final ano = fecha.year.toString();
@@ -50,464 +33,62 @@ class _SiembrasListaScreenState extends State<SiembrasListaScreen> {
     return CultivoLabels.obtenerLabel(lote.cultivoKey);
   }
 
-  Future<void> _seleccionarFechaDesde(BuildContext context) async {
-    final DateTime? fecha = await showDatePicker(
-      context: context,
-      initialDate: _fechaDesde ?? DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-    );
-    if (fecha != null) {
-      setState(() {
-        _fechaDesde = fecha;
-      });
-    }
-  }
-
-  Future<void> _seleccionarFechaHasta(BuildContext context) async {
-    final DateTime? fecha = await showDatePicker(
-      context: context,
-      initialDate: _fechaHasta ?? DateTime.now(),
-      firstDate: _fechaDesde ?? DateTime(2020),
-      lastDate: DateTime.now(),
-    );
-    if (fecha != null) {
-      setState(() {
-        _fechaHasta = fecha;
-      });
-    }
-  }
-
-  List<Movimiento> _aplicarFiltros() {
+  @override
+  Widget build(BuildContext context) {
     // Obtener todas las siembras no anuladas
-    var siembras = widget.motor.movimientos
+    final siembras = motor.movimientos
         .where((m) => m.tipo == TipoMovimiento.siembra && !m.anulado)
         .toList();
 
-    // Filtrar por cultivo si está seleccionado
-    if (_cultivoFiltro != null) {
-      siembras = siembras.where((movimiento) {
-        try {
-          final lote = widget.motor.lotes.firstWhere(
-            (l) => l.id == movimiento.loteId,
-          );
-          return lote.cultivoKey == _cultivoFiltro;
-        } catch (_) {
-          return false;
-        }
-      }).toList();
-    }
-
-    // Filtrar por fecha desde
-    if (_fechaDesde != null) {
-      final inicioDia = DateTime(_fechaDesde!.year, _fechaDesde!.month, _fechaDesde!.day);
-      siembras = siembras.where((movimiento) {
-        return movimiento.fecha.isAfter(inicioDia.subtract(const Duration(milliseconds: 1))) ||
-            movimiento.fecha.isAtSameMomentAs(inicioDia);
-      }).toList();
-    }
-
-    // Filtrar por fecha hasta
-    if (_fechaHasta != null) {
-      final finDia = DateTime(_fechaHasta!.year, _fechaHasta!.month, _fechaHasta!.day);
-      final finDiaConHora = finDia.add(const Duration(days: 1));
-      siembras = siembras.where((movimiento) {
-        return movimiento.fecha.isBefore(finDiaConHora);
-      }).toList();
-    }
-
     // Ordenar por fecha descendente (más nuevo arriba)
     siembras.sort((a, b) => b.fecha.compareTo(a.fecha));
-
-    return siembras;
-  }
-
-  int _contarSiembrasSemana(List<Movimiento> siembras) {
-    final ahora = DateTime.now();
-    final hace7Dias = ahora.subtract(const Duration(days: 7));
-    return siembras.where((movimiento) {
-      return movimiento.fecha.isAfter(hace7Dias) || movimiento.fecha.isAtSameMomentAs(hace7Dias);
-    }).length;
-  }
-
-  int _contarSiembrasMes(List<Movimiento> siembras) {
-    final ahora = DateTime.now();
-    final inicioMes = DateTime(ahora.year, ahora.month, 1);
-    return siembras.where((movimiento) {
-      return movimiento.fecha.isAfter(inicioMes.subtract(const Duration(milliseconds: 1))) ||
-          movimiento.fecha.isAtSameMomentAs(inicioMes);
-    }).length;
-  }
-
-  Map<String, Map<String, int>> _calcularBreakdownPorCultivo(List<Movimiento> siembras) {
-    final ahora = DateTime.now();
-    final hace7Dias = ahora.subtract(const Duration(days: 7));
-    final inicioMes = DateTime(ahora.year, ahora.month, 1);
-
-    final breakdown = <String, Map<String, int>>{};
-
-    for (final movimiento in siembras) {
-      String cultivoKey = 'desconocido';
-      try {
-        final lote = widget.motor.lotes.firstWhere(
-          (l) => l.id == movimiento.loteId,
-        );
-        cultivoKey = lote.cultivoKey;
-      } catch (_) {
-        // cultivoKey ya está en 'desconocido'
-      }
-
-      if (!breakdown.containsKey(cultivoKey)) {
-        breakdown[cultivoKey] = {'7d': 0, 'mes': 0};
-      }
-
-      final stats = breakdown[cultivoKey]!;
-
-      // Contar 7 días
-      if (movimiento.fecha.isAfter(hace7Dias) || movimiento.fecha.isAtSameMomentAs(hace7Dias)) {
-        stats['7d'] = stats['7d']! + 1;
-      }
-
-      // Contar mes
-      if (movimiento.fecha.isAfter(inicioMes.subtract(const Duration(milliseconds: 1))) ||
-          movimiento.fecha.isAtSameMomentAs(inicioMes)) {
-        stats['mes'] = stats['mes']! + 1;
-      }
-    }
-
-    return breakdown;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final siembras = _aplicarFiltros();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Siembras'),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final result = await Navigator.push<bool>(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SiembraNuevaScreen(
-                motor: widget.motor,
-              ),
+      body: siembras.isEmpty
+          ? const Center(
+              child: Text('No hay siembras registradas'),
+            )
+          : ListView.builder(
+              itemCount: siembras.length,
+              itemBuilder: (context, index) {
+                final movimiento = siembras[index];
+
+                Lote? lote;
+                try {
+                  lote = motor.lotes.firstWhere(
+                    (l) => l.id == movimiento.loteId,
+                  );
+                } catch (_) {
+                  lote = null;
+                }
+
+                final fecha = _formatearFecha(movimiento.fecha);
+                final cultivoLabel = _obtenerCultivoLabel(lote);
+                final cantidad = movimiento.cantidad ?? 0;
+                final etapa = lote?.etapaActual ?? Etapa.semillero_calefaccionado;
+                final etapaLabel = _formatearEtapa(etapa);
+
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      child: Text(
+                        fecha,
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                    ),
+                    title: Text(
+                      cultivoLabel,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text('Cantidad: $cantidad · Etapa: $etapaLabel'),
+                  ),
+                );
+              },
             ),
-          );
-
-          // Si se creó una siembra, refrescar lista y stock
-          if (result == true && mounted) {
-            setState(() {
-              // El estado se recalcula a partir de widget.motor
-            });
-          }
-        },
-        child: const Icon(Icons.add),
-      ),
-      body: Column(
-        children: [
-          // Filtros
-          Container(
-            padding: const EdgeInsets.all(16.0),
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            child: Column(
-              children: [
-                // Filtro por cultivo
-                DropdownButtonFormField<String>(
-                  value: _cultivoFiltro,
-                  decoration: const InputDecoration(
-                    labelText: 'Cultivo',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.eco),
-                  ),
-                  items: [
-                    const DropdownMenuItem<String>(
-                      value: null,
-                      child: Text('Todos'),
-                    ),
-                    ...CultivoKeys.todas.map((cultivoKey) {
-                      return DropdownMenuItem<String>(
-                        value: cultivoKey,
-                        child: Text(CultivoLabels.obtenerLabel(cultivoKey)),
-                      );
-                    }),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _cultivoFiltro = value;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                // Filtro por rango de fechas
-                Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => _seleccionarFechaDesde(context),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'Desde',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.calendar_today),
-                          ),
-                          child: Text(
-                            _fechaDesde != null
-                                ? _formatearFechaCompleta(_fechaDesde!)
-                                : 'Seleccionar fecha',
-                            style: TextStyle(
-                              color: _fechaDesde != null
-                                  ? null
-                                  : Theme.of(context).hintColor,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => _seleccionarFechaHasta(context),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'Hasta',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.calendar_today),
-                          ),
-                          child: Text(
-                            _fechaHasta != null
-                                ? _formatearFechaCompleta(_fechaHasta!)
-                                : 'Seleccionar fecha',
-                            style: TextStyle(
-                              color: _fechaHasta != null
-                                  ? null
-                                  : Theme.of(context).hintColor,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                // Botón para limpiar filtros
-                if (_cultivoFiltro != null || _fechaDesde != null || _fechaHasta != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: TextButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          _cultivoFiltro = null;
-                          _fechaDesde = null;
-                          _fechaHasta = null;
-                        });
-                      },
-                      icon: const Icon(Icons.clear),
-                      label: const Text('Limpiar filtros'),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          // Header con KPIs
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-            color: Theme.of(context).colorScheme.surface,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Card(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Semana',
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${_contarSiembrasSemana(siembras)}',
-                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Card(
-                    color: Theme.of(context).colorScheme.secondaryContainer,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Mes',
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${_contarSiembrasMes(siembras)}',
-                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).colorScheme.onSecondaryContainer,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Breakdown por cultivo
-          Builder(
-            builder: (context) {
-              final breakdown = _calcularBreakdownPorCultivo(siembras);
-              if (breakdown.isEmpty) {
-                return const SizedBox.shrink();
-              }
-
-              // Ordenar por total de eventos (descendente)
-              final cultivosOrdenados = breakdown.entries.toList()
-                ..sort((a, b) {
-                  final totalA = a.value['7d']! + a.value['mes']!;
-                  final totalB = b.value['7d']! + b.value['mes']!;
-                  return totalB.compareTo(totalA);
-                });
-
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Por Cultivo',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    ...cultivosOrdenados.map((entry) {
-                      final cultivoKey = entry.key;
-                      final stats = entry.value;
-                      final cultivoLabel = cultivoKey == 'desconocido'
-                          ? 'Cultivo desconocido'
-                          : CultivoLabels.obtenerLabel(cultivoKey);
-
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                cultivoLabel,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Chip(
-                              label: Text('7d: ${stats['7d']}'),
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              visualDensity: VisualDensity.compact,
-                            ),
-                            const SizedBox(width: 4),
-                            Chip(
-                              label: Text('Mes: ${stats['mes']}'),
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              visualDensity: VisualDensity.compact,
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
-                  ],
-                ),
-              );
-            },
-          ),
-          // Lista de siembras
-          Expanded(
-            child: siembras.isEmpty
-                ? const Center(
-                    child: Text('No hay siembras registradas'),
-                  )
-                : ListView.builder(
-                    itemCount: siembras.length,
-                    itemBuilder: (context, index) {
-                      final movimiento = siembras[index];
-
-                      Lote? lote;
-                      try {
-                        lote = widget.motor.lotes.firstWhere(
-                          (l) => l.id == movimiento.loteId,
-                          orElse: () => Lote(
-                            id: movimiento.loteId,
-                            cultivoKey: 'desconocido',
-                            cantidadActual: movimiento.cantidad ?? 0,
-                            etapaActual: Etapa.semillero_calefaccionado,
-                            fechaInicioEtapa: movimiento.fecha,
-                            fechaSiembra: movimiento.fecha,
-                            activo: true,
-                            cortesRealizados: 0,
-                          ),
-                        );
-                      } catch (_) {
-                        lote = null;
-                      }
-
-                      final fecha = _formatearFechaCorta(movimiento.fecha);
-                      final cultivoLabel = _obtenerCultivoLabel(lote);
-                      final cantidad = movimiento.cantidad ?? 0;
-                      final etapa = lote?.etapaActual ?? Etapa.semillero_calefaccionado;
-                      final etapaLabel = _formatearEtapa(etapa);
-
-                      return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            child: Text(
-                              fecha,
-                              style: const TextStyle(fontSize: 11),
-                            ),
-                          ),
-                          title: Text(
-                            cultivoLabel,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Text('Cantidad: $cantidad · Etapa: $etapaLabel'),
-                          onTap: lote == null
-                              ? null
-                              : () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => LoteDetalleScreen(lote: lote!),
-                                    ),
-                                  );
-                                },
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
     );
   }
 }
