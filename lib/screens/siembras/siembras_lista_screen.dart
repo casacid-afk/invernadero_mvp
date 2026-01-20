@@ -6,6 +6,7 @@ import '../../domain/lote.dart';
 import '../../domain/etapa.dart';
 import '../../domain/cultivos.dart';
 import 'lote_detalle_screen.dart';
+import 'siembra_nueva_screen.dart';
 
 class SiembrasListaScreen extends StatefulWidget {
   final MotorInvernadero motor;
@@ -184,6 +185,26 @@ class _SiembrasListaScreenState extends State<SiembrasListaScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Siembras'),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final result = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SiembraNuevaScreen(
+                motor: widget.motor,
+              ),
+            ),
+          );
+
+          // Si se creó una siembra, refrescar lista y stock
+          if (result == true && mounted) {
+            setState(() {
+              // El estado se recalcula a partir de widget.motor
+            });
+          }
+        },
+        child: const Icon(Icons.add),
       ),
       body: Column(
         children: [
