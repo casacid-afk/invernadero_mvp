@@ -150,6 +150,36 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
     return siembrasHoy < promedio7Dias;
   }
 
+  int _calcularSiembras7Dias() {
+    final hoy = DateTime.now();
+    final inicioHoy = DateTime(hoy.year, hoy.month, hoy.day);
+    final finHoy = inicioHoy.add(const Duration(days: 1));
+    final inicio7DiasAtras = inicioHoy.subtract(const Duration(days: 6));
+
+    return motor.movimientos
+        .where((movimiento) =>
+            movimiento.tipo == TipoMovimiento.siembra &&
+            !movimiento.anulado &&
+            movimiento.fecha.isAfter(inicio7DiasAtras.subtract(const Duration(milliseconds: 1))) &&
+            movimiento.fecha.isBefore(finHoy))
+        .fold(0, (suma, movimiento) => suma + (movimiento.cantidad ?? 0));
+  }
+
+  int _calcularSiembras30Dias() {
+    final hoy = DateTime.now();
+    final inicioHoy = DateTime(hoy.year, hoy.month, hoy.day);
+    final finHoy = inicioHoy.add(const Duration(days: 1));
+    final inicio30DiasAtras = inicioHoy.subtract(const Duration(days: 29));
+
+    return motor.movimientos
+        .where((movimiento) =>
+            movimiento.tipo == TipoMovimiento.siembra &&
+            !movimiento.anulado &&
+            movimiento.fecha.isAfter(inicio30DiasAtras.subtract(const Duration(milliseconds: 1))) &&
+            movimiento.fecha.isBefore(finHoy))
+        .fold(0, (suma, movimiento) => suma + (movimiento.cantidad ?? 0));
+  }
+
   @override
   Widget build(BuildContext context) {
     // Calcular stocks usando keys internas
@@ -289,6 +319,16 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                           ),
                         ),
                       ],
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          '7d: ${_calcularSiembras7Dias()} · 30d: ${_calcularSiembras30Dias()}',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                              ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
