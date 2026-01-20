@@ -128,11 +128,64 @@ class HistorialCierresScreen extends StatelessWidget {
     return 'cierres_${fechaPrimerCierre.year}${fechaPrimerCierre.month.toString().padLeft(2, '0')}.pdf';
   }
 
+  String _obtenerNombreMes(int mes) {
+    const meses = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    return meses[mes - 1];
+  }
+
+  DateTime _obtenerMesAnterior(DateTime fecha) {
+    if (fecha.month == 1) {
+      return DateTime(fecha.year - 1, 12, 1);
+    } else {
+      return DateTime(fecha.year, fecha.month - 1, 1);
+    }
+  }
+
+  List<CierreJornada> _filtrarCierresPorMes(List<CierreJornada> cierres, int año, int mes) {
+    return cierres.where((cierre) {
+      return cierre.fecha.year == año && cierre.fecha.month == mes;
+    }).toList();
+  }
+
+  List<CierreJornada> _filtrarCierresHastaFecha(List<CierreJornada> cierres, DateTime fechaLimite) {
+    final fechaFin = DateTime(fechaLimite.year, fechaLimite.month + 1, 1);
+    return cierres.where((cierre) {
+      return cierre.fecha.isBefore(fechaFin);
+    }).toList();
+  }
+
+  List<CierreJornada> _obtenerCierresAcumuladoTemporada(List<CierreJornada> todosCierres, DateTime fechaFin) {
+    // Ordenar por fecha ascendente para obtener el primero
+    final cierresOrdenados = List<CierreJornada>.from(todosCierres)
+      ..sort((a, b) => a.fecha.compareTo(b.fecha));
+    
+    if (cierresOrdenados.isEmpty) return [];
+    
+    final fechaInicio = cierresOrdenados.first.fecha;
+    final fechaFinMes = DateTime(fechaFin.year, fechaFin.month + 1, 1);
+    
+    return todosCierres.where((cierre) {
+      return cierre.fecha.isAfter(fechaInicio.subtract(const Duration(days: 1))) &&
+             cierre.fecha.isBefore(fechaFinMes);
+    }).toList();
+  }
+
+  Map<String, dynamic> _calcularTotales(List<CierreJornada> cierres) {
+    return {
+      'ventas': cierres.fold<int>(0, (suma, c) => suma + c.cantidadVentas),
+      'unidades': cierres.fold<int>(0, (suma, c) => suma + c.unidadesVendidas),
+      'dolares': cierres.fold<double>(0.0, (suma, c) => suma + c.totalDolares),
+    };
+  }
+
   Future<void> _exportarPDF(BuildContext context) async {
-    final cierres = List<CierreJornada>.from(motor.cierresJornada)
+    final todosCierres = List<CierreJornada>.from(motor.cierresJornada)
       ..sort((a, b) => b.fecha.compareTo(a.fecha));
 
-    if (cierres.isEmpty) {
+    if (todosCierres.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('No hay cierres para exportar'),
@@ -143,10 +196,35 @@ class HistorialCierresScreen extends StatelessWidget {
     }
 
     try {
-      // Calcular totales
-      final totalVentas = cierres.fold<int>(0, (suma, c) => suma + c.cantidadVentas);
-      final totalUnidades = cierres.fold<int>(0, (suma, c) => suma + c.unidadesVendidas);
-      final totalDolares = cierres.fold<double>(0.0, (suma, c) => suma + c.totalDolares);
+      // Determinar mes actual (del primer cierre más reciente)
+      final fechaMesActual = todosCierres.first.fecha;
+      final añoActual = fechaMesActual.year;
+      final mesActual = fechaMesActual.month;
+      
+      // Filtrar cierres del mes actual
+      final cierresMesActual = _filtrarCierresPorMes(todosCierres, añoActual, mesActual);
+      
+      // Calcular totales del mes actual
+      final totalesActual = _calcularTotales(cierresMesActual);
+      
+      // Obtener mes anterior
+      final fechaMesAnterior = _obtenerMesAnterior(fechaMesActual);
+      final cierresMesAnterior = _filtrarCierresPorMes(
+        todosCierres,
+        fechaMesAnterior.year,
+        fechaMesAnterior.month,
+      );
+      final totalesAnterior = _calcularTotales(cierresMesAnterior);
+      final hayDatosAnterior = cierresMesAnterior.isNotEmpty;
+      
+      // Calcular acumulado temporada (desde el primer cierre hasta fin del mes actual)
+      final fechaFinTemporada = DateTime(añoActual, mesActual + 1, 1);
+      final cierresAcumulado = _obtenerCierresAcumuladoTemporada(todosCierres, fechaFinTemporada);
+      final totalesAcumulado = _calcularTotales(cierresAcumulado);
+      
+      // Fecha/hora de exportación
+      final ahora = DateTime.now();
+      final fechaExportacion = '${ahora.day}/${ahora.month}/${ahora.year} ${ahora.hour.toString().padLeft(2, '0')}:${ahora.minute.toString().padLeft(2, '0')}';
 
       // Crear PDF
       final pdf = pw.Document();
@@ -158,9 +236,9 @@ class HistorialCierresScreen extends StatelessWidget {
             return pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                // Título
+                // Encabezado
                 pw.Text(
-                  'Cierres de Jornada',
+                  'Reporte Mensual – ${_obtenerNombreMes(mesActual)} $añoActual',
                   style: pw.TextStyle(
                     fontSize: 24,
                     fontWeight: pw.FontWeight.bold,
@@ -168,7 +246,15 @@ class HistorialCierresScreen extends StatelessWidget {
                 ),
                 pw.SizedBox(height: 20),
                 
-                // Tabla
+                // Sección: Resumen (tabla diaria del mes)
+                pw.Text(
+                  'Resumen',
+                  style: pw.TextStyle(
+                    fontSize: 18,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.SizedBox(height: 10),
                 pw.Table(
                   border: pw.TableBorder.all(),
                   children: [
@@ -212,7 +298,7 @@ class HistorialCierresScreen extends StatelessWidget {
                       ],
                     ),
                     // Filas de datos
-                    ...cierres.map((cierre) {
+                    ...cierresMesActual.map((cierre) {
                       return pw.TableRow(
                         children: [
                           pw.Padding(
@@ -259,7 +345,7 @@ class HistorialCierresScreen extends StatelessWidget {
                         pw.Padding(
                           padding: const pw.EdgeInsets.all(8),
                           child: pw.Text(
-                            totalVentas.toString(),
+                            totalesActual['ventas'].toString(),
                             style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                             textAlign: pw.TextAlign.right,
                           ),
@@ -267,7 +353,7 @@ class HistorialCierresScreen extends StatelessWidget {
                         pw.Padding(
                           padding: const pw.EdgeInsets.all(8),
                           child: pw.Text(
-                            totalUnidades.toString(),
+                            totalesActual['unidades'].toString(),
                             style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                             textAlign: pw.TextAlign.right,
                           ),
@@ -275,7 +361,7 @@ class HistorialCierresScreen extends StatelessWidget {
                         pw.Padding(
                           padding: const pw.EdgeInsets.all(8),
                           child: pw.Text(
-                            '\$${totalDolares.toStringAsFixed(2)}',
+                            '\$${totalesActual['dolares'].toStringAsFixed(2)}',
                             style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                             textAlign: pw.TextAlign.right,
                           ),
@@ -283,6 +369,310 @@ class HistorialCierresScreen extends StatelessWidget {
                       ],
                     ),
                   ],
+                ),
+                pw.SizedBox(height: 20),
+                
+                // Sección: Comparativo
+                pw.Text(
+                  'Comparativo: Mes Actual vs Mes Anterior',
+                  style: pw.TextStyle(
+                    fontSize: 18,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.SizedBox(height: 10),
+                pw.Table(
+                  border: pw.TableBorder.all(),
+                  children: [
+                    // Encabezados
+                    pw.TableRow(
+                      decoration: const pw.BoxDecoration(
+                        color: PdfColors.grey300,
+                      ),
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            'Métrica',
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            'Actual',
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            'Anterior',
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            'Diferencia',
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            '%',
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Ventas
+                    pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text('Ventas'),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            totalesActual['ventas'].toString(),
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            hayDatosAnterior ? totalesAnterior['ventas'].toString() : 'Sin datos',
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            hayDatosAnterior 
+                                ? (totalesActual['ventas'] as int - totalesAnterior['ventas'] as int).toString()
+                                : '-',
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            hayDatosAnterior && totalesAnterior['ventas'] > 0
+                                ? '${(((totalesActual['ventas'] as int - totalesAnterior['ventas'] as int) / totalesAnterior['ventas'] as int) * 100).toStringAsFixed(1)}%'
+                                : '-',
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Unidades
+                    pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text('Unidades'),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            totalesActual['unidades'].toString(),
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            hayDatosAnterior ? totalesAnterior['unidades'].toString() : 'Sin datos',
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            hayDatosAnterior 
+                                ? (totalesActual['unidades'] as int - totalesAnterior['unidades'] as int).toString()
+                                : '-',
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            hayDatosAnterior && totalesAnterior['unidades'] > 0
+                                ? '${(((totalesActual['unidades'] as int - totalesAnterior['unidades'] as int) / totalesAnterior['unidades'] as int) * 100).toStringAsFixed(1)}%'
+                                : '-',
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Total $
+                    pw.TableRow(
+                      decoration: const pw.BoxDecoration(
+                        color: PdfColors.grey200,
+                      ),
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            'Total \$',
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            '\$${totalesActual['dolares'].toStringAsFixed(2)}',
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            hayDatosAnterior 
+                                ? '\$${totalesAnterior['dolares'].toStringAsFixed(2)}'
+                                : 'Sin datos',
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            hayDatosAnterior 
+                                ? '\$${(totalesActual['dolares'] as double - totalesAnterior['dolares'] as double).toStringAsFixed(2)}'
+                                : '-',
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            hayDatosAnterior && totalesAnterior['dolares'] > 0
+                                ? '${(((totalesActual['dolares'] as double - totalesAnterior['dolares'] as double) / totalesAnterior['dolares'] as double) * 100).toStringAsFixed(1)}%'
+                                : '-',
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 20),
+                
+                // Sección: Acumulado Temporada
+                pw.Text(
+                  'Acumulado Temporada',
+                  style: pw.TextStyle(
+                    fontSize: 18,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.SizedBox(height: 10),
+                pw.Table(
+                  border: pw.TableBorder.all(),
+                  children: [
+                    // Encabezados
+                    pw.TableRow(
+                      decoration: const pw.BoxDecoration(
+                        color: PdfColors.grey300,
+                      ),
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            'Métrica',
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            'Total',
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Ventas
+                    pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text('Ventas'),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            totalesAcumulado['ventas'].toString(),
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Unidades
+                    pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text('Unidades'),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            totalesAcumulado['unidades'].toString(),
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Total $
+                    pw.TableRow(
+                      decoration: const pw.BoxDecoration(
+                        color: PdfColors.grey200,
+                      ),
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            'Total \$',
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            '\$${totalesAcumulado['dolares'].toStringAsFixed(2)}',
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                pw.Spacer(),
+                
+                // Pie: fecha/hora exportación
+                pw.Divider(),
+                pw.SizedBox(height: 10),
+                pw.Text(
+                  'Exportado el $fechaExportacion',
+                  style: pw.TextStyle(
+                    fontSize: 10,
+                    color: PdfColors.grey700,
+                  ),
                 ),
               ],
             );
@@ -298,7 +688,7 @@ class HistorialCierresScreen extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('PDF generado: ${_generarNombreArchivoPDF(cierres)}'),
+            content: Text('PDF generado: ${_generarNombreArchivoPDF(cierresMesActual)}'),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 2),
           ),
