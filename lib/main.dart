@@ -8,6 +8,7 @@ import 'dev/dev_config.dart';
 import 'services/app_repository.dart';
 import 'services/bootstrap_service.dart';
 import 'screens/ventas_screen.dart';
+import 'screens/reportes_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -160,6 +161,59 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                       Icon(
                         Icons.arrow_forward_ios,
                         color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Botón para ir a reportes
+            Card(
+              color: Theme.of(context).colorScheme.secondaryContainer,
+              child: InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ReportesScreen(motor: motor),
+                    ),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.bar_chart,
+                        size: 32,
+                        color: Theme.of(context).colorScheme.secondary,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Reportes',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Ver reportes diarios de ventas',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        color: Theme.of(context).colorScheme.secondary,
                       ),
                     ],
                   ),
