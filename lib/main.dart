@@ -180,6 +180,32 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
         .fold(0, (suma, movimiento) => suma + (movimiento.cantidad ?? 0));
   }
 
+  double _calcularVentasPromedioDiario30Dias() {
+    final hoy = DateTime.now();
+    final inicioHoy = DateTime(hoy.year, hoy.month, hoy.day);
+    final finHoy = inicioHoy.add(const Duration(days: 1));
+    final inicio30DiasAtras = inicioHoy.subtract(const Duration(days: 29));
+
+    final ventas30Dias = motor.movimientos
+        .where((movimiento) =>
+            movimiento.tipo == TipoMovimiento.venta &&
+            !movimiento.anulado &&
+            movimiento.fecha.isAfter(inicio30DiasAtras.subtract(const Duration(milliseconds: 1))) &&
+            movimiento.fecha.isBefore(finHoy))
+        .fold(0, (suma, movimiento) => suma + (movimiento.cantidad ?? 0));
+
+    return ventas30Dias / 30.0;
+  }
+
+  double? _calcularCobertura() {
+    final ventasPromedio = _calcularVentasPromedioDiario30Dias();
+    if (ventasPromedio <= 0) {
+      return null; // Evitar división por 0
+    }
+    final siembras7Dias = _calcularSiembras7Dias();
+    return siembras7Dias / ventasPromedio;
+  }
+
   @override
   Widget build(BuildContext context) {
     // Calcular stocks usando keys internas
@@ -322,11 +348,25 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                       const SizedBox(height: 8),
                       Align(
                         alignment: Alignment.centerRight,
-                        child: Text(
-                          '7d: ${_calcularSiembras7Dias()} · 30d: ${_calcularSiembras30Dias()}',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '7d: ${_calcularSiembras7Dias()} · 30d: ${_calcularSiembras30Dias()}',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                  ),
+                            ),
+                            if (_calcularCobertura() != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'Cobertura: ~${_calcularCobertura()!.toStringAsFixed(1)} días',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                    ),
                               ),
+                            ],
+                          ],
                         ),
                       ),
                     ],
