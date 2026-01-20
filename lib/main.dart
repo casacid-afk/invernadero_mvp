@@ -70,6 +70,9 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
   late final MotorInvernadero motor;
   DevScenario _scenarioSeleccionado = DevScenario.normal;
   String? _errorValidacion;
+  
+  // Meta diaria global
+  static const int META_DIARIA = 50;
 
   @override
   void initState() {
@@ -97,7 +100,7 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
   }
 
   String _formatearEtapa(Etapa etapa) {
-    return etapa.name.replaceAll('_', ' ').split(' ').map((word) {
+     return etapa.name.replaceAll('_', ' ').split(' ').map((word) {
       if (word.isEmpty) return '';
       return word[0].toUpperCase() + word.substring(1);
     }).join(' ');
@@ -126,6 +129,31 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
             movimiento.fecha.isAfter(inicioHoy.subtract(const Duration(milliseconds: 1))) &&
             movimiento.fecha.isBefore(finHoy))
         .fold(0, (suma, movimiento) => suma + (movimiento.cantidad ?? 0));
+  }
+
+  /// Obtiene el estado y texto de la meta diaria
+  Map<String, dynamic> _obtenerEstadoMetaDiaria() {
+    final hoy = _calcularSiembrasHoy();
+    
+    if (hoy >= META_DIARIA) {
+      return {
+        'estado': 'ok',
+        'texto': 'Meta hoy: OK ($hoy/$META_DIARIA)',
+        'color': Colors.green,
+      };
+    } else if (hoy > 0) {
+      return {
+        'estado': 'bajo',
+        'texto': 'Meta hoy: Bajo ($hoy/$META_DIARIA)',
+        'color': Colors.orange,
+      };
+    } else {
+      return {
+        'estado': 'deficit',
+        'texto': 'Meta hoy: Déficit (0/$META_DIARIA)',
+        'color': Colors.red,
+      };
+    }
   }
 
   double _calcularPromedio7Dias() {
@@ -438,6 +466,12 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                           ),
                         ),
                       ],
+                      // Badge de meta diaria (siempre visible)
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: _buildBadgeMetaDiaria(),
+                      ),
                       const SizedBox(height: 8),
                       Align(
                         alignment: Alignment.centerRight,
@@ -745,6 +779,17 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
     );
   }
 
+  /// Obtiene el color del semáforo según la cobertura en días
+  Color _obtenerColorSemáforo(double coberturaDias) {
+    if (coberturaDias >= 21) {
+      return Colors.green;
+    } else if (coberturaDias >= 7) {
+      return Colors.orange;
+    } else {
+      return Colors.red;
+    }
+  }
+
   Widget _buildCoberturaPorCultivo() {
     final coberturas = _obtenerCoberturasPorCultivo();
 
@@ -765,13 +810,73 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: cultivosAMostrar.map((entry) {
         final label = CultivoLabels.obtenerLabel(entry.key);
-        return Text(
-          '$label: ~${entry.value.toStringAsFixed(0)}d',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+        final coberturaDias = entry.value;
+        final colorSemáforo = _obtenerColorSemáforo(coberturaDias);
+        
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: colorSemáforo,
+                shape: BoxShape.circle,
               ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '$label: ~${coberturaDias.toStringAsFixed(0)}d',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  ),
+            ),
+          ],
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildBadgeMetaDiaria() {
+    final estadoMeta = _obtenerEstadoMetaDiaria();
+    final colorEstado = estadoMeta['color'] as Color;
+    final textoEstado = estadoMeta['texto'] as String;
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        color: colorEstado.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorEstado.withOpacity(0.5),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: colorEstado,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            textoEstado,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorEstado.shade700,
+                  fontWeight: FontWeight.w500,
+                ),
+          ),
+        ],
+      ),
     );
   }
 }
