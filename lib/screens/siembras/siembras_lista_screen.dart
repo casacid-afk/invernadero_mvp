@@ -5,6 +5,7 @@ import '../../domain/movimiento.dart';
 import '../../domain/lote.dart';
 import '../../domain/etapa.dart';
 import '../../domain/cultivos.dart';
+import 'lote_detalle_screen.dart';
 
 class SiembrasListaScreen extends StatefulWidget {
   final MotorInvernadero motor;
@@ -282,6 +283,16 @@ class _SiembrasListaScreenState extends State<SiembrasListaScreen> {
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           subtitle: Text('Cantidad: $cantidad · Etapa: $etapaLabel'),
+                          onTap: lote == null
+                              ? null
+                              : () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => LoteDetalleScreen(lote: lote!),
+                                    ),
+                                  );
+                                },
                         ),
                       );
                     },
