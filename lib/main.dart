@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'domain/motor_invernadero.dart';
 import 'domain/etapa.dart';
 import 'domain/cultivos.dart';
+import 'domain/movimiento.dart';
 import 'dev/dev_seed.dart';
 import 'dev/dev_validaciones.dart';
 import 'dev/dev_config.dart';
@@ -113,6 +114,20 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
     }
   }
 
+  int _calcularSiembrasHoy() {
+    final hoy = DateTime.now();
+    final inicioHoy = DateTime(hoy.year, hoy.month, hoy.day);
+    final finHoy = inicioHoy.add(const Duration(days: 1));
+
+    return motor.movimientos
+        .where((movimiento) =>
+            movimiento.tipo == TipoMovimiento.siembra &&
+            !movimiento.anulado &&
+            movimiento.fecha.isAfter(inicioHoy.subtract(const Duration(milliseconds: 1))) &&
+            movimiento.fecha.isBefore(finHoy))
+        .fold(0, (suma, movimiento) => suma + (movimiento.cantidad ?? 0));
+  }
+
   @override
   Widget build(BuildContext context) {
     // Calcular stocks usando keys internas
@@ -123,6 +138,7 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
     final stockPerejil = motor.calcularStockPorCultivo(CultivoKeys.perejil);
     final totalMovimientos = motor.movimientos.length;
     final movimientosAnulados = motor.movimientos.where((m) => m.anulado).length;
+    final siembrasHoy = _calcularSiembrasHoy();
 
     return Scaffold(
       appBar: AppBar(
@@ -151,39 +167,66 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                 },
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Row(
+                  child: Column(
                     children: [
-                      Icon(
-                        Icons.shopping_cart,
-                        size: 32,
-                        color: Theme.of(context).colorScheme.primary,
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.shopping_cart,
+                            size: 32,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Registrar Venta',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleLarge
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Registrar una nueva venta de cultivos',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_forward_ios,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Registrar Venta',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
+                      if (siembrasHoy > 0) ...[
+                        const SizedBox(height: 12),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'Hoy sembrado: $siembrasHoy',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.primary,
+                                    fontWeight: FontWeight.w500,
                                   ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Registrar una nueva venta de cultivos',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                      ],
                     ],
                   ),
                 ),
