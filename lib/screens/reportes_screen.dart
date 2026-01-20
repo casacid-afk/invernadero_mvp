@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../domain/motor_invernadero.dart';
 import '../domain/movimiento.dart';
 import '../domain/cultivos.dart';
+import 'historial_cierres_screen.dart';
 
 class ReportesScreen extends StatefulWidget {
   final MotorInvernadero motor;
@@ -227,15 +228,40 @@ class _ReportesScreenState extends State<ReportesScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Botón Cerrar día
-            ElevatedButton.icon(
-              onPressed: _verificarCierreDisponible() ? _cerrarJornada : null,
-              icon: const Icon(Icons.lock),
-              label: const Text('Cerrar Día'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                textStyle: const TextStyle(fontSize: 16),
-              ),
+            // Botones de acción
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _verificarCierreDisponible() ? _cerrarJornada : null,
+                    icon: const Icon(Icons.lock),
+                    label: const Text('Cerrar Día'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      textStyle: const TextStyle(fontSize: 16),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => HistorialCierresScreen(motor: widget.motor),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.history),
+                    label: const Text('Historial de Cierres'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      textStyle: const TextStyle(fontSize: 16),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
