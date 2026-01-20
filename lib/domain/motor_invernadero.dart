@@ -3,7 +3,10 @@ import 'movimiento.dart';
 import 'etapa.dart';
 import 'cultivos.dart';
 import 'cierre_jornada.dart';
-import '../services/firestore_cierres_service.dart';
+// Import condicional: exporta la implementación correcta según el entorno
+// - En Flutter: usa FirestoreCierresService real con Firebase
+// - En scripts CLI: usa stub sin dependencias de Flutter
+import '../services/firestore_cierres_service_export.dart';
 
 class MotorInvernadero {
   final List<Lote> _lotes = [];
@@ -454,8 +457,8 @@ class MotorInvernadero {
       throw ArgumentError('Cultivo inválido: $cultivoKey');
     }
 
-    // Calcular stock disponible del cultivo
-    final stockDisponible = calcularStockPorCultivo(cultivoKey);
+    // Calcular stock disponible del cultivo solo en etapa final (bancada_final)
+    final stockDisponible = calcularStockFinalPorCultivo(cultivoKey);
 
     // Validar que haya stock suficiente
     if (stockDisponible < cantidad) {
@@ -563,9 +566,21 @@ class MotorInvernadero {
     _movimientos[movimientoIndex] = movimientoAnulado;
   }
 
+  /// Calcula el stock total por cultivo considerando todas las etapas
   int calcularStockPorCultivo(String cultivoKey) {
     return _lotes
         .where((lote) => lote.activo && lote.cultivoKey == cultivoKey)
+        .fold(0, (suma, lote) => suma + lote.cantidadActual);
+  }
+
+  /// Calcula el stock disponible para venta por cultivo,
+  /// considerando solo lotes activos en etapa final (bancada_final)
+  int calcularStockFinalPorCultivo(String cultivoKey) {
+    return _lotes
+        .where((lote) =>
+            lote.activo &&
+            lote.cultivoKey == cultivoKey &&
+            lote.etapaActual == Etapa.bancada_final)
         .fold(0, (suma, lote) => suma + lote.cantidadActual);
   }
 

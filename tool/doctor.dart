@@ -16,7 +16,10 @@ Future<void> _ejecutarDartAnalyze() async {
   try {
     final result = await Process.run(
       'dart',
-      ['analyze'],
+      [
+        'analyze',
+        'lib/',
+      ],
       runInShell: true,
     );
 
@@ -42,8 +45,8 @@ Future<void> _ejecutarDartAnalyze() async {
 Future<void> _ejecutarRunnerSeed() async {
   try {
     final result = await Process.run(
-      'dart',
-      ['run', 'tool/runner.dart', 'seed'],
+      'flutter',
+      ['pub', 'run', 'tool/runner.dart', 'seed'],
       runInShell: true,
     );
 
@@ -69,8 +72,8 @@ Future<void> _ejecutarRunnerSeed() async {
 Future<void> _ejecutarRunnerScenarioSmoke() async {
   try {
     final result = await Process.run(
-      'dart',
-      ['run', 'tool/runner.dart', 'scenario', 'smoke'],
+      'flutter',
+      ['pub', 'run', 'tool/runner.dart', 'scenario', 'smoke'],
       runInShell: true,
     );
 

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../domain/motor_invernadero.dart';
 import '../../domain/movimiento.dart';
-import '../../domain/lote.dart';
 import '../../domain/cultivos.dart';
 
 class BalanceSiembrasVentasScreen extends StatefulWidget {

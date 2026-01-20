@@ -124,12 +124,25 @@ class _VentasScreenState extends State<VentasScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Obtener stock disponible para mostrar en el selector
-    final stocksDisponibles = <String, int>{};
+    // Obtener stock total y stock disponible para venta (solo etapa final)
+    final stocksTotales = <String, int>{};
+    final stocksDisponiblesVenta = <String, int>{};
     for (final cultivoKey in CultivoKeys.todas) {
-      stocksDisponibles[cultivoKey] =
+      stocksTotales[cultivoKey] =
           widget.motor.calcularStockPorCultivo(cultivoKey);
+      stocksDisponiblesVenta[cultivoKey] =
+          widget.motor.calcularStockFinalPorCultivo(cultivoKey);
     }
+
+    final cultivoSeleccionado = _cultivoSeleccionado;
+    final stockTotalSeleccionado =
+        cultivoSeleccionado != null ? (stocksTotales[cultivoSeleccionado] ?? 0) : 0;
+    final stockDisponibleVentaSeleccionado = cultivoSeleccionado != null
+        ? (stocksDisponiblesVenta[cultivoSeleccionado] ?? 0)
+        : 0;
+
+    final puedeRegistrarVenta =
+        !_isLoading && cultivoSeleccionado != null && stockDisponibleVentaSeleccionado > 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -152,14 +165,15 @@ class _VentasScreenState extends State<VentasScreen> {
                   prefixIcon: Icon(Icons.eco),
                 ),
                 items: CultivoKeys.todas.map((cultivoKey) {
-                  final stock = stocksDisponibles[cultivoKey] ?? 0;
+                  final stockTotal = stocksTotales[cultivoKey] ?? 0;
+                  final stockVenta = stocksDisponiblesVenta[cultivoKey] ?? 0;
                   final label = CultivoLabels.obtenerLabel(cultivoKey);
                   return DropdownMenuItem<String>(
                     value: cultivoKey,
                     child: Text(
-                      '$label (Stock: $stock)',
+                      '$label (Total: $stockTotal, Disp. venta: $stockVenta)',
                       style: TextStyle(
-                        color: stock > 0 ? null : Colors.grey,
+                        color: stockVenta > 0 ? null : Colors.grey,
                       ),
                     ),
                   );
@@ -177,6 +191,39 @@ class _VentasScreenState extends State<VentasScreen> {
                 },
               ),
               const SizedBox(height: 16),
+
+              // Información de stock para el cultivo seleccionado
+              if (cultivoSeleccionado != null)
+                Card(
+                  color: Theme.of(context).colorScheme.surfaceVariant,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Stock seleccionado',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Total: $stockTotalSeleccionado unidades',
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Disponible para venta (etapa final): $stockDisponibleVentaSeleccionado unidades',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: stockDisponibleVentaSeleccionado > 0
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              if (cultivoSeleccionado != null) const SizedBox(height: 16),
 
               // Campo cantidad
               TextFormField(
@@ -254,7 +301,7 @@ class _VentasScreenState extends State<VentasScreen> {
 
               // Botón registrar venta
               ElevatedButton.icon(
-                onPressed: _isLoading ? null : _registrarVenta,
+                onPressed: puedeRegistrarVenta ? _registrarVenta : null,
                 icon: _isLoading
                     ? const SizedBox(
                         width: 20,
