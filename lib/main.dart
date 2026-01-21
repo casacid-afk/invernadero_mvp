@@ -74,6 +74,14 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
   // Meta diaria global
   static const int META_DIARIA = 50;
 
+  // Metas diarias por cultivo
+  static const Map<String, int> METAS_DIARIAS_POR_CULTIVO = {
+    'lechuga': 50,
+    'cilantro': 20,
+    'rucula': 5,
+    'perejil': 5,
+  };
+
   @override
   void initState() {
     super.initState();
@@ -232,6 +240,29 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
     }
     final siembras7Dias = _calcularSiembras7Dias();
     return siembras7Dias / ventasPromedio;
+  }
+
+  /// Calcula las siembras de hoy para un cultivo específico
+  int _calcularSiembrasHoyPorCultivo(String cultivoKey) {
+    final hoy = DateTime.now();
+    final inicioHoy = DateTime(hoy.year, hoy.month, hoy.day);
+    final finHoy = inicioHoy.add(const Duration(days: 1));
+
+    return motor.movimientos
+        .where((movimiento) =>
+            movimiento.tipo == TipoMovimiento.siembra &&
+            !movimiento.anulado &&
+            movimiento.fecha.isAfter(inicioHoy.subtract(const Duration(milliseconds: 1))) &&
+            movimiento.fecha.isBefore(finHoy))
+        .map((movimiento) {
+          try {
+            final lote = motor.obtenerLote(movimiento.loteId);
+            return lote.cultivoKey == cultivoKey ? movimiento.cantidad ?? 0 : 0;
+          } catch (e) {
+            return 0;
+          }
+        })
+        .fold(0, (suma, cantidad) => suma + cantidad);
   }
 
   /// Calcula las siembras de los últimos 7 días para un cultivo específico
@@ -813,6 +844,22 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
         final coberturaDias = entry.value;
         final colorSemáforo = _obtenerColorSemáforo(coberturaDias);
         
+        // Calcular meta diaria para este cultivo
+        final hoyCultivo = _calcularSiembrasHoyPorCultivo(entry.key);
+        final metaCultivo = METAS_DIARIAS_POR_CULTIVO[entry.key];
+        
+        // Determinar color y estado de la meta
+        Color? colorMeta;
+        if (metaCultivo != null) {
+          if (hoyCultivo >= metaCultivo) {
+            colorMeta = Colors.green;
+          } else if (hoyCultivo > 0) {
+            colorMeta = Colors.orange;
+          } else {
+            colorMeta = Colors.red;
+          }
+        }
+        
         return Row(
           mainAxisAlignment: MainAxisAlignment.end,
           mainAxisSize: MainAxisSize.min,
@@ -832,6 +879,24 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                     color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   ),
             ),
+            if (metaCultivo != null && colorMeta != null) ...[
+              const SizedBox(width: 8),
+              Container(
+                width: 4,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colorMeta,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '· Meta: $hoyCultivo/$metaCultivo',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    ),
+              ),
+            ],
           ],
         );
       }).toList(),
