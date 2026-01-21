@@ -7,12 +7,14 @@ class SiembraNuevaScreen extends StatefulWidget {
   final MotorInvernadero motor;
   final String? initialCultivoKey;
   final int? initialCantidad;
+  final bool esSiembraRapida;
 
   const SiembraNuevaScreen({
     super.key,
     required this.motor,
     this.initialCultivoKey,
     this.initialCantidad,
+    this.esSiembraRapida = false,
   });
 
   @override
@@ -61,6 +63,61 @@ class _SiembraNuevaScreenState extends State<SiembraNuevaScreen> {
     }
   }
 
+  Future<void> _mostrarDialogoConfirmacion(
+    BuildContext context,
+    int cantidad,
+    String cultivoKey,
+  ) async {
+    final cultivoLabel = CultivoLabels.obtenerLabel(cultivoKey);
+    final esSiembraRapida = widget.esSiembraRapida;
+    final resultado = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Siembra registrada'),
+          content: Text('Sembraste $cantidad de $cultivoLabel. ¿Qué deseas hacer?'),
+          actions: [
+            // Botón "Registrar otra siembra"
+            TextButton(
+              onPressed: () => Navigator.of(context).pop('otra'),
+              child: const Text('Registrar otra siembra'),
+            ),
+            // Botón "Volver al Home" (destacado si es siembra rápida)
+            if (esSiembraRapida)
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop('home'),
+                child: const Text('Volver al Home'),
+              )
+            else
+              TextButton(
+                onPressed: () => Navigator.of(context).pop('home'),
+                child: const Text('Volver al Home'),
+              ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted) return;
+
+    if (resultado == 'home') {
+      // Volver al Home y forzar recarga de coberturas/alertas
+      // Pasar true como resultado para que el Home recargue coberturas
+      Navigator.of(context).pop(true);
+    } else if (resultado == 'otra') {
+      // Registrar otra siembra: mantener cultivo seleccionado, cantidad vacía
+      setState(() {
+        _cantidad = null;
+        _cantidadController.clear();
+        _guardando = false;
+      });
+    } else {
+      // Si se cierra el diálogo de otra forma, volver al Home por defecto
+      Navigator.of(context).pop(true);
+    }
+  }
+
   Future<void> _guardar() async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
@@ -88,17 +145,8 @@ class _SiembraNuevaScreenState extends State<SiembraNuevaScreen> {
         fecha: _fecha,
       );
 
-      // La alerta de cobertura se actualizará automáticamente
-      // cuando se recargue el Home (en didChangeDependencies)
-
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(
-          content: Text('Siembra registrada correctamente'),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      Navigator.of(context).pop(true);
+      // Mostrar diálogo de confirmación
+      await _mostrarDialogoConfirmacion(context, _cantidad!, _cultivoKey!);
     } catch (e) {
       scaffoldMessenger.showSnackBar(
         SnackBar(

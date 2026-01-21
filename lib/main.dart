@@ -394,6 +394,7 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
           motor: motor,
           initialCultivoKey: cultivoKey,
           initialCantidad: cantidadSugerida > 0 ? cantidadSugerida : null,
+          esSiembraRapida: true,
         ),
       ),
     );
