@@ -47,6 +47,14 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
   String? _errorValidacion;
   Map<String, String> _coberturas = {};
 
+  /// Metas diarias de siembras por cultivo
+  static const Map<String, int> METAS_DIARIAS_POR_CULTIVO = {
+    CultivoKeys.lechuga: 5,
+    CultivoKeys.cilantro: 3,
+    CultivoKeys.perejil: 2,
+    CultivoKeys.rucula: 4,
+  };
+
   @override
   void initState() {
     super.initState();
@@ -212,6 +220,26 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
     }
 
     return conteo;
+  }
+
+  /// Calcula el estado de siembras de hoy por cultivo comparando con meta diaria
+  Map<String, Map<String, dynamic>> _calcularEstadoSiembrasHoyPorCultivo() {
+    final siembrasHoy = _contarSiembrasHoyPorCultivo();
+    final estados = <String, Map<String, dynamic>>{};
+
+    for (final cultivoKey in CultivoKeys.todas) {
+      final siembras = siembrasHoy[cultivoKey] ?? 0;
+      final meta = METAS_DIARIAS_POR_CULTIVO[cultivoKey] ?? 0;
+      final estado = siembras >= meta ? 'ok' : 'bajo';
+
+      estados[cultivoKey] = {
+        'siembras': siembras,
+        'meta': meta,
+        'estado': estado,
+      };
+    }
+
+    return estados;
   }
 
   @override
@@ -381,6 +409,9 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
             const SizedBox(height: 16),
             // Card de acceso a Flujo
             _buildCardFlujo(context),
+            const SizedBox(height: 16),
+            // Alerta siembras hoy
+            _buildCardAlertaSiembras(context),
             const SizedBox(height: 16),
             // Últimas siembras
             _buildUltimasSiembras(context),
@@ -591,6 +622,71 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardAlertaSiembras(BuildContext context) {
+    final estados = _calcularEstadoSiembrasHoyPorCultivo();
+    final todosOk = estados.values.every((e) => e['estado'] == 'ok');
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Alerta siembras (hoy)',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (todosOk)
+              Row(
+                children: [
+                  const Text('✅'),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Siembras de hoy en meta',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              )
+            else
+              ...CultivoKeys.todas.map((cultivoKey) {
+                final estado = estados[cultivoKey]!;
+                final siembras = estado['siembras'] as int;
+                final meta = estado['meta'] as int;
+                final esOk = estado['estado'] == 'ok';
+                final label = CultivoLabels.obtenerLabel(cultivoKey);
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Row(
+                    children: [
+                      Text(
+                        esOk ? '✓' : '!',
+                        style: TextStyle(
+                          color: esOk ? Colors.green : Colors.orange,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '$label: $siembras / $meta',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+          ],
         ),
       ),
     );
