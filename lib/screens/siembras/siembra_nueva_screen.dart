@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../domain/cultivos.dart';
 import '../../domain/motor_invernadero.dart';
+import '../../services/alertas_cobertura_service.dart';
 
 class SiembraNuevaScreen extends StatefulWidget {
   final MotorInvernadero motor;
@@ -67,6 +68,9 @@ class _SiembraNuevaScreenState extends State<SiembraNuevaScreen> {
         cantidad: _cantidad!,
         fecha: _fecha,
       );
+
+      // Desactivar alerta de cobertura para este cultivo
+      await AlertasCoberturaService.desactivarAlerta(_cultivoKey!);
 
       scaffoldMessenger.showSnackBar(
         const SnackBar(
@@ -199,6 +203,7 @@ class _SiembraNuevaScreenState extends State<SiembraNuevaScreen> {
     );
   }
 }
+
 
 
 

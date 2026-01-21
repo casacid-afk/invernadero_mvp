@@ -590,6 +590,24 @@ class MotorInvernadero {
         .fold(0, (suma, lote) => suma + lote.cantidadActual);
   }
 
+  /// Calcula la cobertura de un cultivo
+  /// Retorna '🔴' si stock == 0, '🟡' si stock > 0 y < meta, '🟢' si stock >= meta
+  /// Si meta es null, usa lógica simplificada: 🔴 = stock == 0, 🟢 = stock > 0
+  String calcularCobertura(String cultivoKey, {int? meta}) {
+    final stock = calcularStockPorCultivo(cultivoKey);
+    if (stock == 0) {
+      return '🔴';
+    }
+    if (meta != null && meta > 0) {
+      if (stock < meta) {
+        return '🟡';
+      }
+      return '🟢';
+    }
+    // Si no hay meta definida, usar lógica simplificada
+    return '🟢';
+  }
+
   void reset() {
     _lotes.clear();
     _movimientos.clear();

@@ -95,3 +95,4 @@ class LoteDetalleScreen extends StatelessWidget {
 
 
 
+
