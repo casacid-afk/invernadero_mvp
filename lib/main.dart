@@ -9,6 +9,8 @@ import 'services/alertas_cobertura_service.dart';
 import 'services/ajustes_service.dart';
 import 'screens/ajustes/ajustes_screen.dart';
 import 'screens/siembras/siembra_nueva_screen.dart';
+import 'screens/siembras/siembras_lista_screen.dart';
+import 'domain/movimiento.dart';
 import 'widgets/cobertura_badge.dart';
 
 void main() {
@@ -120,6 +122,45 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
         return 'Merma Alta';
       case DevScenario.cosechaParcial:
         return 'Cosecha Parcial';
+    }
+  }
+
+  /// Formatea la hora de una fecha como "HH:mm" o "hoy/ayer + hora"
+  String _formatearHora(DateTime fecha) {
+    final ahora = DateTime.now();
+    final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+    final ayer = hoy.subtract(const Duration(days: 1));
+    final fechaComparar = DateTime(fecha.year, fecha.month, fecha.day);
+
+    final hora = '${fecha.hour.toString().padLeft(2, '0')}:${fecha.minute.toString().padLeft(2, '0')}';
+
+    if (fechaComparar == hoy) {
+      return 'hoy $hora';
+    } else if (fechaComparar == ayer) {
+      return 'ayer $hora';
+    } else {
+      return hora;
+    }
+  }
+
+  /// Obtiene las últimas 3 siembras no anuladas
+  List<Movimiento> _obtenerUltimasSiembras() {
+    final siembras = motor.movimientos
+        .where((m) => m.tipo == TipoMovimiento.siembra && !m.anulado)
+        .toList();
+    siembras.sort((a, b) => b.fecha.compareTo(a.fecha));
+    return siembras.take(3).toList();
+  }
+
+  /// Obtiene el nombre del cultivo desde un movimiento de siembra
+  String _obtenerCultivoDeSiembra(Movimiento movimiento) {
+    try {
+      final lote = motor.lotes.firstWhere(
+        (l) => l.id == movimiento.loteId,
+      );
+      return CultivoLabels.obtenerLabel(lote.cultivoKey);
+    } catch (_) {
+      return 'Cultivo desconocido';
     }
   }
 
@@ -285,6 +326,9 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
               );
             }),
             const SizedBox(height: 16),
+            // Últimas siembras
+            _buildUltimasSiembras(context),
+            const SizedBox(height: 16),
             // Stock por cultivo
             Card(
               child: Padding(
@@ -373,6 +417,112 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildUltimasSiembras(BuildContext context) {
+    final ultimasSiembras = _obtenerUltimasSiembras();
+
+    if (ultimasSiembras.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Últimas siembras',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'No hay siembras registradas',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Card(
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => SiembrasListaScreen(motor: motor),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Últimas siembras',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => SiembrasListaScreen(motor: motor),
+                        ),
+                      );
+                    },
+                    child: const Text('Ver todas'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ...ultimasSiembras.map((movimiento) {
+                final cultivo = _obtenerCultivoDeSiembra(movimiento);
+                final cantidad = movimiento.cantidad ?? 0;
+                final hora = _formatearHora(movimiento.fecha);
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          cultivo,
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                      ),
+                      Text(
+                        '$cantidad',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Text(
+                        hora,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
