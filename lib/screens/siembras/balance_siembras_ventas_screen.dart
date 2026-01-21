@@ -7,10 +7,7 @@ import '../../domain/cultivos.dart';
 class BalanceSiembrasVentasScreen extends StatefulWidget {
   final MotorInvernadero motor;
 
-  const BalanceSiembrasVentasScreen({
-    super.key,
-    required this.motor,
-  });
+  const BalanceSiembrasVentasScreen({super.key, required this.motor});
 
   @override
   State<BalanceSiembrasVentasScreen> createState() =>
@@ -18,7 +15,8 @@ class BalanceSiembrasVentasScreen extends StatefulWidget {
 }
 
 class _BalanceSiembrasVentasScreenState
-    extends State<BalanceSiembrasVentasScreen> with SingleTickerProviderStateMixin {
+    extends State<BalanceSiembrasVentasScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _periodoSeleccionado = 0; // 0 = 7 días, 1 = 30 días
 
@@ -131,9 +129,7 @@ class _BalanceSiembrasVentasScreenState
 
   Widget _buildListaBalance(List<BalanceCultivo> balances) {
     if (balances.isEmpty) {
-      return const Center(
-        child: Text('No hay datos disponibles'),
-      );
+      return const Center(child: Text('No hay datos disponibles'));
     }
 
     return ListView.builder(
@@ -158,22 +154,14 @@ class _BalanceSiembrasVentasScreenState
                       child: Text(
                         CultivoLabels.obtenerLabel(balance.cultivoKey),
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     if (tieneAlerta)
-                      Icon(
-                        Icons.warning,
-                        color: Colors.red,
-                        size: 24,
-                      )
+                      Icon(Icons.warning, color: Colors.red, size: 24)
                     else if (vigilar)
-                      Icon(
-                        Icons.info_outline,
-                        color: Colors.orange,
-                        size: 24,
-                      ),
+                      Icon(Icons.info_outline, color: Colors.orange, size: 24),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -183,28 +171,30 @@ class _BalanceSiembrasVentasScreenState
                   children: [
                     Chip(
                       label: Text('Siembras: ${balance.siembras}'),
-                      backgroundColor:
-                          Theme.of(context).colorScheme.primaryContainer,
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.primaryContainer,
                     ),
                     Chip(
                       label: Text('Ventas: ${balance.ventas}'),
-                      backgroundColor:
-                          Theme.of(context).colorScheme.secondaryContainer,
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.secondaryContainer,
                     ),
                     Chip(
                       label: Text('Balance: $balanceValor'),
                       backgroundColor: tieneAlerta
                           ? Colors.red.shade100
                           : vigilar
-                              ? Colors.orange.shade100
-                              : Colors.green.shade100,
+                          ? Colors.orange.shade100
+                          : Colors.green.shade100,
                       labelStyle: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: tieneAlerta
                             ? Colors.red.shade900
                             : vigilar
-                                ? Colors.orange.shade900
-                                : Colors.green.shade900,
+                            ? Colors.orange.shade900
+                            : Colors.green.shade900,
                       ),
                     ),
                   ],
@@ -215,9 +205,9 @@ class _BalanceSiembrasVentasScreenState
                     child: Text(
                       '⚠️ ALERTA: Balance negativo',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.red.shade900,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        color: Colors.red.shade900,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   )
                 else if (vigilar)
@@ -226,9 +216,9 @@ class _BalanceSiembrasVentasScreenState
                     child: Text(
                       '👁️ VIGILAR: Balance en cero',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.orange.shade900,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        color: Colors.orange.shade900,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
               ],
@@ -251,4 +241,3 @@ class BalanceCultivo {
     required this.ventas,
   });
 }
-

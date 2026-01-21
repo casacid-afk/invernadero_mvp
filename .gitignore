@@ -4,6 +4,7 @@
 *.pyc
 *.swp
 .DS_Store
+seed_log.txt
 .atom/
 .build/
 .buildlog/

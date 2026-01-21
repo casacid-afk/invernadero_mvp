@@ -39,9 +39,7 @@ class Lote {
       id: map['id'] as String,
       cultivoKey: map['cultivoKey'] as String,
       cantidadActual: map['cantidadActual'] as int,
-      etapaActual: Etapa.values.firstWhere(
-        (e) => e.name == map['etapaActual'],
-      ),
+      etapaActual: Etapa.values.firstWhere((e) => e.name == map['etapaActual']),
       fechaInicioEtapa: DateTime.parse(map['fechaInicioEtapa'] as String),
       fechaSiembra: DateTime.parse(map['fechaSiembra'] as String),
       activo: map['activo'] as bool,
@@ -49,5 +47,3 @@ class Lote {
     );
   }
 }
-
-

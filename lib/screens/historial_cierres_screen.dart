@@ -7,22 +7,12 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../domain/motor_invernadero.dart';
 import '../domain/cierre_jornada.dart';
+import '../utils/formatters.dart';
 
 class HistorialCierresScreen extends StatelessWidget {
   final MotorInvernadero motor;
 
-  const HistorialCierresScreen({
-    super.key,
-    required this.motor,
-  });
-
-  String _formatearFecha(DateTime fecha) {
-    return '${fecha.day}/${fecha.month}/${fecha.year}';
-  }
-
-  String _formatearFechaCSV(DateTime fecha) {
-    return '${fecha.day}/${fecha.month}/${fecha.year}';
-  }
+  const HistorialCierresScreen({super.key, required this.motor});
 
   String _generarCSV(List<CierreJornada> cierres) {
     final buffer = StringBuffer();
@@ -33,7 +23,7 @@ class HistorialCierresScreen extends StatelessWidget {
     // Datos
     for (final cierre in cierres) {
       buffer.writeln(
-        '${_formatearFechaCSV(cierre.fecha)},'
+        '${formatoFechaCorta(cierre.fecha)},'
         '${cierre.cantidadVentas},'
         '${cierre.unidadesVendidas},'
         '${cierre.totalDolares.toStringAsFixed(2)}',
@@ -48,7 +38,7 @@ class HistorialCierresScreen extends StatelessWidget {
       final ahora = DateTime.now();
       return 'cierres_${ahora.year}${ahora.month.toString().padLeft(2, '0')}.csv';
     }
-    
+
     // Usar el mes del primer cierre (más reciente)
     final fechaPrimerCierre = cierres.first.fecha;
     return 'cierres_${fechaPrimerCierre.year}${fechaPrimerCierre.month.toString().padLeft(2, '0')}.csv';
@@ -75,23 +65,21 @@ class HistorialCierresScreen extends StatelessWidget {
       // Obtener directorio temporal
       final directory = await getTemporaryDirectory();
       final file = File('${directory.path}/$nombreArchivo');
-      
+
       // Escribir CSV
       await file.writeAsString(csvContent);
 
       // Compartir o descargar según plataforma
       if (Platform.isAndroid || Platform.isIOS) {
         // Móvil: compartir
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          text: 'Exportación de cierres de jornada',
-        );
+        await Share.shareXFiles([
+          XFile(file.path),
+        ], text: 'Exportación de cierres de jornada');
       } else {
         // Web/Desktop: descargar (usar share también funciona)
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          text: 'Exportación de cierres de jornada',
-        );
+        await Share.shareXFiles([
+          XFile(file.path),
+        ], text: 'Exportación de cierres de jornada');
       }
 
       if (context.mounted) {
@@ -121,7 +109,7 @@ class HistorialCierresScreen extends StatelessWidget {
       final ahora = DateTime.now();
       return 'cierres_${ahora.year}${ahora.month.toString().padLeft(2, '0')}.pdf';
     }
-    
+
     // Usar el mes del primer cierre (más reciente)
     final fechaPrimerCierre = cierres.first.fecha;
     return 'cierres_${fechaPrimerCierre.year}${fechaPrimerCierre.month.toString().padLeft(2, '0')}.pdf';
@@ -143,9 +131,18 @@ class HistorialCierresScreen extends StatelessWidget {
 
     try {
       // Calcular totales
-      final totalVentas = cierres.fold<int>(0, (suma, c) => suma + c.cantidadVentas);
-      final totalUnidades = cierres.fold<int>(0, (suma, c) => suma + c.unidadesVendidas);
-      final totalDolares = cierres.fold<double>(0.0, (suma, c) => suma + c.totalDolares);
+      final totalVentas = cierres.fold<int>(
+        0,
+        (suma, c) => suma + c.cantidadVentas,
+      );
+      final totalUnidades = cierres.fold<int>(
+        0,
+        (suma, c) => suma + c.unidadesVendidas,
+      );
+      final totalDolares = cierres.fold<double>(
+        0.0,
+        (suma, c) => suma + c.totalDolares,
+      );
 
       // Crear PDF
       final pdf = pw.Document();
@@ -166,7 +163,7 @@ class HistorialCierresScreen extends StatelessWidget {
                   ),
                 ),
                 pw.SizedBox(height: 20),
-                
+
                 // Tabla
                 pw.Table(
                   border: pw.TableBorder.all(),
@@ -216,7 +213,7 @@ class HistorialCierresScreen extends StatelessWidget {
                         children: [
                           pw.Padding(
                             padding: const pw.EdgeInsets.all(8),
-                            child: pw.Text(_formatearFecha(cierre.fecha)),
+                            child: pw.Text(formatoFechaCorta(cierre.fecha)),
                           ),
                           pw.Padding(
                             padding: const pw.EdgeInsets.all(8),
@@ -320,16 +317,19 @@ class HistorialCierresScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Cierre del ${_formatearFecha(cierre.fecha)}'),
+        title: Text('Cierre del ${formatoFechaCorta(cierre.fecha)}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildDetalleItem('Fecha', _formatearFecha(cierre.fecha)),
+            _buildDetalleItem('Fecha', formatoFechaCorta(cierre.fecha)),
             const SizedBox(height: 12),
             _buildDetalleItem('Ventas', cierre.cantidadVentas.toString()),
             const SizedBox(height: 12),
-            _buildDetalleItem('Unidades Vendidas', cierre.unidadesVendidas.toString()),
+            _buildDetalleItem(
+              'Unidades Vendidas',
+              cierre.unidadesVendidas.toString(),
+            ),
             const SizedBox(height: 12),
             _buildDetalleItem(
               'Total \$',
@@ -348,14 +348,15 @@ class HistorialCierresScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDetalleItem(String label, String valor, {bool isHighlight = false}) {
+  Widget _buildDetalleItem(
+    String label,
+    String valor, {
+    bool isHighlight = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
         Text(
           valor,
           style: TextStyle(
@@ -396,17 +397,13 @@ class HistorialCierresScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.history,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
+                  Icon(Icons.history, size: 64, color: Colors.grey[400]),
                   const SizedBox(height: 16),
                   Text(
                     'No hay cierres registrados',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleLarge?.copyWith(color: Colors.grey[600]),
                   ),
                 ],
               ),
@@ -422,17 +419,19 @@ class HistorialCierresScreen extends StatelessWidget {
                   ),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.primaryContainer,
                       child: Icon(
                         Icons.lock,
                         color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                     title: Text(
-                      _formatearFecha(cierre.fecha),
+                      formatoFechaCorta(cierre.fecha),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     subtitle: Text(
                       '${cierre.cantidadVentas} ventas • ${cierre.unidadesVendidas} unidades',
@@ -440,9 +439,9 @@ class HistorialCierresScreen extends StatelessWidget {
                     trailing: Text(
                       '\$${cierre.totalDolares.toStringAsFixed(2)}',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                     onTap: () => _mostrarDetalle(context, cierre),
                   ),
@@ -452,4 +451,3 @@ class HistorialCierresScreen extends StatelessWidget {
     );
   }
 }
-

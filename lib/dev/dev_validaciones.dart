@@ -39,7 +39,7 @@ void assertConsistencia(MotorInvernadero motor) {
   // Stock final incluye todos los lotes (activos e inactivos) porque las plantas siguen existiendo
   // aunque el lote esté cerrado (inactivo)
   final stockFinal = motor.lotes.fold<int>(
-    0, 
+    0,
     (suma, lote) => suma + lote.cantidadActual,
   );
 
@@ -92,4 +92,3 @@ void validarKeysCultivos(MotorInvernadero motor) {
     exit(1);
   }
 }
-

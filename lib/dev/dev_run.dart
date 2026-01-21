@@ -38,11 +38,21 @@ void main() {
 
   // Calcular stocks usando keys internas, mostrar labels bonitos
   print('6. Stock por cultivo:');
-  print('   - ${CultivoLabels.obtenerLabel(CultivoKeys.lechuga)}: ${motor.calcularStockPorCultivo(CultivoKeys.lechuga)}');
-  print('   - ${CultivoLabels.obtenerLabel(CultivoKeys.cilantro)}: ${motor.calcularStockPorCultivo(CultivoKeys.cilantro)}');
-  print('   - ${CultivoLabels.obtenerLabel(CultivoKeys.acelga)}: ${motor.calcularStockPorCultivo(CultivoKeys.acelga)}');
-  print('   - ${CultivoLabels.obtenerLabel(CultivoKeys.rucula)}: ${motor.calcularStockPorCultivo(CultivoKeys.rucula)}');
-  print('   - ${CultivoLabels.obtenerLabel(CultivoKeys.perejil)}: ${motor.calcularStockPorCultivo(CultivoKeys.perejil)}');
+  print(
+    '   - ${CultivoLabels.obtenerLabel(CultivoKeys.lechuga)}: ${motor.calcularStockPorCultivo(CultivoKeys.lechuga)}',
+  );
+  print(
+    '   - ${CultivoLabels.obtenerLabel(CultivoKeys.cilantro)}: ${motor.calcularStockPorCultivo(CultivoKeys.cilantro)}',
+  );
+  print(
+    '   - ${CultivoLabels.obtenerLabel(CultivoKeys.acelga)}: ${motor.calcularStockPorCultivo(CultivoKeys.acelga)}',
+  );
+  print(
+    '   - ${CultivoLabels.obtenerLabel(CultivoKeys.rucula)}: ${motor.calcularStockPorCultivo(CultivoKeys.rucula)}',
+  );
+  print(
+    '   - ${CultivoLabels.obtenerLabel(CultivoKeys.perejil)}: ${motor.calcularStockPorCultivo(CultivoKeys.perejil)}',
+  );
   print('');
 
   print('7. Stock por etapa:');
@@ -60,4 +70,3 @@ void main() {
 
   print('=== Fin de datos de prueba ===');
 }
-

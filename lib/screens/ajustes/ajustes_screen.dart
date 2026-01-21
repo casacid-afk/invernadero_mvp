@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../domain/cultivos.dart';
 import '../../services/ajustes_service.dart';
+import '../../utils/parsers.dart';
 
 class AjustesScreen extends StatefulWidget {
   const AjustesScreen({super.key});
@@ -36,7 +37,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
 
     try {
       final metas = await AjustesService.cargarMetas();
-      
+
       for (final cultivoKey in CultivoKeys.todas) {
         final meta = metas[cultivoKey] ?? 0;
         _metasIniciales[cultivoKey] = meta;
@@ -68,7 +69,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
     for (final cultivoKey in CultivoKeys.todas) {
       final controller = _controllers[cultivoKey];
       if (controller != null) {
-        final valorActual = int.tryParse(controller.text) ?? 0;
+        final valorActual = parsearIntConDefault(controller.text, 0);
         final valorInicial = _metasIniciales[cultivoKey] ?? 0;
         if (valorActual != valorInicial) {
           hayCambios = true;
@@ -76,7 +77,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
         }
       }
     }
-    
+
     if (hayCambios != _hasChanges) {
       setState(() {
         _hasChanges = hayCambios;
@@ -169,9 +170,11 @@ class _AjustesScreenState extends State<AjustesScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(error
-              ? 'Algunas metas no se pudieron guardar'
-              : 'Todas las metas guardadas correctamente'),
+          content: Text(
+            error
+                ? 'Algunas metas no se pudieron guardar'
+                : 'Todas las metas guardadas correctamente',
+          ),
           backgroundColor: error ? Colors.orange : Colors.green,
           duration: const Duration(seconds: 2),
         ),
@@ -218,12 +221,8 @@ class _AjustesScreenState extends State<AjustesScreen> {
                             Expanded(
                               child: Text(
                                 cultivoLabel,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.bold),
                               ),
                             ),
                             IconButton(
@@ -255,4 +254,3 @@ class _AjustesScreenState extends State<AjustesScreen> {
     );
   }
 }
-

@@ -53,4 +53,3 @@ class CultivoConfig {
     return obtenerMaxCortes(cultivoKey) > 0;
   }
 }
-

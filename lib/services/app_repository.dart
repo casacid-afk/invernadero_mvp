@@ -11,4 +11,3 @@ class AppRepository {
     dev_seed.seed(motor);
   }
 }
-

@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import '../domain/motor_invernadero.dart';
 import '../domain/movimiento.dart';
+import '../utils/formatters.dart';
 import 'historial_cierres_screen.dart';
 
 class ReportesScreen extends StatefulWidget {
   final MotorInvernadero motor;
 
-  const ReportesScreen({
-    super.key,
-    required this.motor,
-  });
+  const ReportesScreen({super.key, required this.motor});
 
   @override
   State<ReportesScreen> createState() => _ReportesScreenState();
@@ -39,7 +37,9 @@ class _ReportesScreenState extends State<ReportesScreen> {
     return widget.motor.movimientos.where((movimiento) {
       return movimiento.tipo == TipoMovimiento.venta &&
           !movimiento.anulado &&
-          movimiento.fecha.isAfter(inicioDia.subtract(const Duration(milliseconds: 1))) &&
+          movimiento.fecha.isAfter(
+            inicioDia.subtract(const Duration(milliseconds: 1)),
+          ) &&
           movimiento.fecha.isBefore(finDia);
     }).toList();
   }
@@ -92,10 +92,6 @@ class _ReportesScreenState extends State<ReportesScreen> {
     };
   }
 
-  String _formatearFecha(DateTime fecha) {
-    return '${fecha.day}/${fecha.month}/${fecha.year}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final reporte = _calcularReporte();
@@ -132,7 +128,7 @@ class _ReportesScreenState extends State<ReportesScreen> {
                               ),
                             ),
                             Text(
-                              _formatearFecha(_fechaSeleccionada),
+                              formatoFechaCorta(_fechaSeleccionada),
                               style: Theme.of(context).textTheme.titleLarge,
                             ),
                           ],
@@ -156,8 +152,8 @@ class _ReportesScreenState extends State<ReportesScreen> {
                     Text(
                       'Resumen del Día',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     _buildMetrica(
@@ -197,8 +193,8 @@ class _ReportesScreenState extends State<ReportesScreen> {
                     Text(
                       'Desglose por Medio de Pago',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     _buildMedioPago(
@@ -232,7 +228,9 @@ class _ReportesScreenState extends State<ReportesScreen> {
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: _verificarCierreDisponible() ? _cerrarJornada : null,
+                    onPressed: _verificarCierreDisponible()
+                        ? _cerrarJornada
+                        : null,
                     icon: const Icon(Icons.lock),
                     label: const Text('Cerrar Día'),
                     style: ElevatedButton.styleFrom(
@@ -248,7 +246,8 @@ class _ReportesScreenState extends State<ReportesScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => HistorialCierresScreen(motor: widget.motor),
+                          builder: (context) =>
+                              HistorialCierresScreen(motor: widget.motor),
                         ),
                       );
                     },
@@ -269,21 +268,28 @@ class _ReportesScreenState extends State<ReportesScreen> {
   }
 
   bool _verificarCierreDisponible() {
-    final fechaInicio = DateTime(_fechaSeleccionada.year, _fechaSeleccionada.month, _fechaSeleccionada.day);
+    final fechaInicio = DateTime(
+      _fechaSeleccionada.year,
+      _fechaSeleccionada.month,
+      _fechaSeleccionada.day,
+    );
     final fechaFin = fechaInicio.add(const Duration(days: 1));
-    
+
     return !widget.motor.cierresJornada.any(
-      (cierre) => cierre.fecha.isAfter(fechaInicio.subtract(const Duration(milliseconds: 1))) &&
-                  cierre.fecha.isBefore(fechaFin),
+      (cierre) =>
+          cierre.fecha.isAfter(
+            fechaInicio.subtract(const Duration(milliseconds: 1)),
+          ) &&
+          cierre.fecha.isBefore(fechaFin),
     );
   }
 
   void _cerrarJornada() async {
     final reporte = _calcularReporte();
-    
+
     try {
       await widget.motor.cerrarJornadaAutomatico(_fechaSeleccionada);
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -293,7 +299,7 @@ class _ReportesScreenState extends State<ReportesScreen> {
           duration: const Duration(seconds: 3),
         ),
       );
-      
+
       setState(() {});
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -318,20 +324,15 @@ class _ReportesScreenState extends State<ReportesScreen> {
         Icon(icon, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 12),
         Expanded(
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
+          child: Text(label, style: Theme.of(context).textTheme.bodyLarge),
         ),
         Text(
           valor,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontSize: isHighlight ? 20 : null,
-                color: isHighlight
-                    ? Theme.of(context).colorScheme.primary
-                    : null,
-              ),
+            fontWeight: FontWeight.bold,
+            fontSize: isHighlight ? 20 : null,
+            color: isHighlight ? Theme.of(context).colorScheme.primary : null,
+          ),
         ),
       ],
     );
@@ -355,20 +356,16 @@ class _ReportesScreenState extends State<ReportesScreen> {
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
+          child: Text(label, style: Theme.of(context).textTheme.bodyLarge),
         ),
         Text(
           '\$${monto.toStringAsFixed(2)}',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
         ),
       ],
     );
   }
 }
-

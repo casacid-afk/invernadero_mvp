@@ -2,11 +2,7 @@ import '../domain/motor_invernadero.dart';
 import '../domain/etapa.dart';
 import '../domain/cultivos.dart';
 
-enum DevScenario {
-  normal,
-  mermaAlta,
-  cosechaParcial,
-}
+enum DevScenario { normal, mermaAlta, cosechaParcial }
 
 void seed(MotorInvernadero motor, {DevScenario scenario = DevScenario.normal}) {
   final ahora = DateTime.now();
@@ -176,4 +172,3 @@ void seed(MotorInvernadero motor, {DevScenario scenario = DevScenario.normal}) {
     );
   }
 }
-

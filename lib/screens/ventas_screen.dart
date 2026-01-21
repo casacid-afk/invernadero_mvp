@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import '../domain/motor_invernadero.dart';
 import '../domain/cultivos.dart';
 import '../domain/movimiento.dart';
+import '../utils/parsers.dart';
 
 class VentasScreen extends StatefulWidget {
   final MotorInvernadero motor;
 
-  const VentasScreen({
-    super.key,
-    required this.motor,
-  });
+  const VentasScreen({super.key, required this.motor});
 
   @override
   State<VentasScreen> createState() => _VentasScreenState();
@@ -17,7 +15,7 @@ class VentasScreen extends StatefulWidget {
 
 class _VentasScreenState extends State<VentasScreen> {
   final _formKey = GlobalKey<FormState>();
-  
+
   String? _cultivoSeleccionado;
   final _cantidadController = TextEditingController();
   final _precioController = TextEditingController();
@@ -128,21 +126,25 @@ class _VentasScreenState extends State<VentasScreen> {
     final stocksTotales = <String, int>{};
     final stocksDisponiblesVenta = <String, int>{};
     for (final cultivoKey in CultivoKeys.todas) {
-      stocksTotales[cultivoKey] =
-          widget.motor.calcularStockPorCultivo(cultivoKey);
-      stocksDisponiblesVenta[cultivoKey] =
-          widget.motor.calcularStockFinalPorCultivo(cultivoKey);
+      stocksTotales[cultivoKey] = widget.motor.calcularStockPorCultivo(
+        cultivoKey,
+      );
+      stocksDisponiblesVenta[cultivoKey] = widget.motor
+          .calcularStockFinalPorCultivo(cultivoKey);
     }
 
     final cultivoSeleccionado = _cultivoSeleccionado;
-    final stockTotalSeleccionado =
-        cultivoSeleccionado != null ? (stocksTotales[cultivoSeleccionado] ?? 0) : 0;
+    final stockTotalSeleccionado = cultivoSeleccionado != null
+        ? (stocksTotales[cultivoSeleccionado] ?? 0)
+        : 0;
     final stockDisponibleVentaSeleccionado = cultivoSeleccionado != null
         ? (stocksDisponiblesVenta[cultivoSeleccionado] ?? 0)
         : 0;
 
     final puedeRegistrarVenta =
-        !_isLoading && cultivoSeleccionado != null && stockDisponibleVentaSeleccionado > 0;
+        !_isLoading &&
+        cultivoSeleccionado != null &&
+        stockDisponibleVentaSeleccionado > 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -206,9 +208,7 @@ class _VentasScreenState extends State<VentasScreen> {
                           style: Theme.of(context).textTheme.titleSmall,
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          'Total: $stockTotalSeleccionado unidades',
-                        ),
+                        Text('Total: $stockTotalSeleccionado unidades'),
                         const SizedBox(height: 4),
                         Text(
                           'Disponible para venta (etapa final): $stockDisponibleVentaSeleccionado unidades',
@@ -319,8 +319,14 @@ class _VentasScreenState extends State<VentasScreen> {
               // Información de total (si hay cantidad y precio)
               Builder(
                 builder: (context) {
-                  final cantidad = int.tryParse(_cantidadController.text) ?? 0;
-                  final precio = double.tryParse(_precioController.text) ?? 0.0;
+                  final cantidad = parsearIntConDefault(
+                    _cantidadController.text,
+                    0,
+                  );
+                  final precio = parsearDoubleConDefault(
+                    _precioController.text,
+                    0.0,
+                  );
                   final total = cantidad * precio;
 
                   if (cantidad > 0 && precio > 0) {
@@ -344,7 +350,9 @@ class _VentasScreenState extends State<VentasScreen> {
                                     .headlineMedium
                                     ?.copyWith(
                                       fontWeight: FontWeight.bold,
-                                      color: Theme.of(context).colorScheme.primary,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
                                     ),
                               ),
                             ],

@@ -6,7 +6,7 @@ class BootstrapService {
 
   static Future<void> ensureSeeded(AppRepository repo) async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Si ya está seeded, retornar inmediatamente
     if (prefs.getBool(_seededKey) == true) {
       return;
@@ -24,10 +24,3 @@ class BootstrapService {
     await repo.motor.cargarCierresDesdeFirestore();
   }
 }
-
-
-
-
-
-
-

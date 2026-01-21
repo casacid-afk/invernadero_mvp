@@ -7,10 +7,7 @@ import '../../services/alertas_cobertura_service.dart';
 class SiembraNuevaScreen extends StatefulWidget {
   final MotorInvernadero motor;
 
-  const SiembraNuevaScreen({
-    super.key,
-    required this.motor,
-  });
+  const SiembraNuevaScreen({super.key, required this.motor});
 
   @override
   State<SiembraNuevaScreen> createState() => _SiembraNuevaScreenState();
@@ -51,9 +48,7 @@ class _SiembraNuevaScreenState extends State<SiembraNuevaScreen> {
 
     if (_cultivoKey == null || _cantidad == null) {
       scaffoldMessenger.showSnackBar(
-        const SnackBar(
-          content: Text('Completa todos los campos'),
-        ),
+        const SnackBar(content: Text('Completa todos los campos')),
       );
       return;
     }
@@ -99,9 +94,7 @@ class _SiembraNuevaScreenState extends State<SiembraNuevaScreen> {
         '${_fecha.day.toString().padLeft(2, '0')}-${_fecha.month.toString().padLeft(2, '0')}-${_fecha.year}';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Nueva siembra'),
-      ),
+      appBar: AppBar(title: const Text('Nueva siembra')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -110,10 +103,7 @@ class _SiembraNuevaScreenState extends State<SiembraNuevaScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Fecha
-              Text(
-                'Fecha',
-                style: Theme.of(context).textTheme.labelLarge,
-              ),
+              Text('Fecha', style: Theme.of(context).textTheme.labelLarge),
               const SizedBox(height: 8),
               InkWell(
                 onTap: () => _seleccionarFecha(context),
@@ -189,7 +179,9 @@ class _SiembraNuevaScreenState extends State<SiembraNuevaScreen> {
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
                       : const Icon(Icons.save),
@@ -203,7 +195,3 @@ class _SiembraNuevaScreenState extends State<SiembraNuevaScreen> {
     );
   }
 }
-
-
-
-

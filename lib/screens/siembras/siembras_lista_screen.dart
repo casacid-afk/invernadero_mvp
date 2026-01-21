@@ -5,27 +5,22 @@ import '../../domain/movimiento.dart';
 import '../../domain/lote.dart';
 import '../../domain/etapa.dart';
 import '../../domain/cultivos.dart';
+import '../../utils/formatters.dart';
 
 class SiembrasListaScreen extends StatelessWidget {
   final MotorInvernadero motor;
 
-  const SiembrasListaScreen({
-    super.key,
-    required this.motor,
-  });
-
-  String _formatearFecha(DateTime fecha) {
-    final dia = fecha.day.toString().padLeft(2, '0');
-    final mes = fecha.month.toString().padLeft(2, '0');
-    final ano = fecha.year.toString();
-    return '$dia-$mes-$ano';
-  }
+  const SiembrasListaScreen({super.key, required this.motor});
 
   String _formatearEtapa(Etapa etapa) {
-    return etapa.name.replaceAll('_', ' ').split(' ').map((word) {
-      if (word.isEmpty) return '';
-      return word[0].toUpperCase() + word.substring(1);
-    }).join(' ');
+    return etapa.name
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map((word) {
+          if (word.isEmpty) return '';
+          return word[0].toUpperCase() + word.substring(1);
+        })
+        .join(' ');
   }
 
   String _obtenerCultivoLabel(Lote? lote) {
@@ -44,13 +39,9 @@ class SiembrasListaScreen extends StatelessWidget {
     siembras.sort((a, b) => b.fecha.compareTo(a.fecha));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Siembras'),
-      ),
+      appBar: AppBar(title: const Text('Siembras')),
       body: siembras.isEmpty
-          ? const Center(
-              child: Text('No hay siembras registradas'),
-            )
+          ? const Center(child: Text('No hay siembras registradas'))
           : ListView.builder(
               itemCount: siembras.length,
               itemBuilder: (context, index) {
@@ -65,20 +56,21 @@ class SiembrasListaScreen extends StatelessWidget {
                   lote = null;
                 }
 
-                final fecha = _formatearFecha(movimiento.fecha);
+                final fecha = formatoFechaGuiones(movimiento.fecha);
                 final cultivoLabel = _obtenerCultivoLabel(lote);
                 final cantidad = movimiento.cantidad ?? 0;
-                final etapa = lote?.etapaActual ?? Etapa.semillero_calefaccionado;
+                final etapa =
+                    lote?.etapaActual ?? Etapa.semillero_calefaccionado;
                 final etapaLabel = _formatearEtapa(etapa);
 
                 return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: ListTile(
                     leading: CircleAvatar(
-                      child: Text(
-                        fecha,
-                        style: const TextStyle(fontSize: 11),
-                      ),
+                      child: Text(fecha, style: const TextStyle(fontSize: 11)),
                     ),
                     title: Text(
                       cultivoLabel,
@@ -92,5 +84,3 @@ class SiembrasListaScreen extends StatelessWidget {
     );
   }
 }
-
-

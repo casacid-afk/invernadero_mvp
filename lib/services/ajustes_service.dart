@@ -53,13 +53,12 @@ class AjustesService {
   static Future<int> obtenerMetaEfectiva(String cultivoKey) async {
     final prefs = await SharedPreferences.getInstance();
     final metaGuardada = prefs.getInt('$_prefsKeyPrefix$cultivoKey');
-    
+
     if (metaGuardada != null) {
       return metaGuardada;
     }
-    
+
     // Fallback al valor por defecto
     return METAS_DIARIAS_POR_CULTIVO[cultivoKey] ?? 0;
   }
 }
-

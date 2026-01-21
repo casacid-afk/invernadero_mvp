@@ -14,14 +14,10 @@ void main(List<String> args) async {
 
 Future<void> _ejecutarDartAnalyze() async {
   try {
-    final result = await Process.run(
-      'dart',
-      [
-        'analyze',
-        'lib/',
-      ],
-      runInShell: true,
-    );
+    final result = await Process.run('dart', [
+      'analyze',
+      'lib/',
+    ], runInShell: true);
 
     if (_verbose || result.exitCode != 0) {
       stdout.write(result.stdout);
@@ -44,11 +40,12 @@ Future<void> _ejecutarDartAnalyze() async {
 
 Future<void> _ejecutarRunnerSeed() async {
   try {
-    final result = await Process.run(
-      'flutter',
-      ['pub', 'run', 'tool/runner.dart', 'seed'],
-      runInShell: true,
-    );
+    final result = await Process.run('flutter', [
+      'pub',
+      'run',
+      'tool/runner.dart',
+      'seed',
+    ], runInShell: true);
 
     if (_verbose || result.exitCode != 0) {
       stdout.write(result.stdout);
@@ -71,11 +68,13 @@ Future<void> _ejecutarRunnerSeed() async {
 
 Future<void> _ejecutarRunnerScenarioSmoke() async {
   try {
-    final result = await Process.run(
-      'flutter',
-      ['pub', 'run', 'tool/runner.dart', 'scenario', 'smoke'],
-      runInShell: true,
-    );
+    final result = await Process.run('flutter', [
+      'pub',
+      'run',
+      'tool/runner.dart',
+      'scenario',
+      'smoke',
+    ], runInShell: true);
 
     if (_verbose || result.exitCode != 0) {
       stdout.write(result.stdout);
@@ -95,4 +94,3 @@ Future<void> _ejecutarRunnerScenarioSmoke() async {
     exit(1);
   }
 }
-

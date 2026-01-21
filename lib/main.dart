@@ -56,22 +56,23 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
   Future<void> _cargarAlertasYCoberturas() async {
     // Cargar metas desde ajustes (con fallback a valores por defecto)
     final metas = await AjustesService.cargarMetas();
-    
+
     // Calcular coberturas actuales usando las metas efectivas
     final coberturas = <String, String>{};
     for (final cultivoKey in CultivoKeys.todas) {
       final meta = metas[cultivoKey] ?? 0;
       coberturas[cultivoKey] = motor.calcularCobertura(cultivoKey, meta: meta);
     }
-    
+
     // Actualizar alertas según cobertura actual
     // Si cobertura == 🔴, se activa la alerta (persistente)
     // Si cobertura != 🔴, se desactiva la alerta
     await AlertasCoberturaService.actualizarAlertasSegunCobertura(coberturas);
-    
+
     // Cargar alertas activas desde SharedPreferences
-    final alertasActivas = await AlertasCoberturaService.obtenerAlertasActivas();
-    
+    final alertasActivas =
+        await AlertasCoberturaService.obtenerAlertasActivas();
+
     if (mounted) {
       setState(() {
         _coberturas = coberturas;
@@ -106,10 +107,14 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
   }
 
   String _formatearEtapa(Etapa etapa) {
-    return etapa.name.replaceAll('_', ' ').split(' ').map((word) {
-      if (word.isEmpty) return '';
-      return word[0].toUpperCase() + word.substring(1);
-    }).join(' ');
+    return etapa.name
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map((word) {
+          if (word.isEmpty) return '';
+          return word[0].toUpperCase() + word.substring(1);
+        })
+        .join(' ');
   }
 
   String _formatearEscenario(DevScenario scenario) {
@@ -128,7 +133,9 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
     final stockLechuga = motor.calcularStockPorCultivo('lechuga');
     final stockTomate = motor.calcularStockPorCultivo('tomate');
     final totalMovimientos = motor.movimientos.length;
-    final movimientosAnulados = motor.movimientos.where((m) => m.anulado).length;
+    final movimientosAnulados = motor.movimientos
+        .where((m) => m.anulado)
+        .length;
 
     return Scaffold(
       appBar: AppBar(
@@ -139,15 +146,17 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
             icon: const Icon(Icons.settings),
             tooltip: 'Ajustes',
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const AjustesScreen(),
-                ),
-              ).then((_) {
-                // Recargar alertas y coberturas cuando se regresa de Ajustes
-                // para reflejar cambios en las metas
-                _cargarAlertasYCoberturas();
-              });
+              Navigator.of(context)
+                  .push(
+                    MaterialPageRoute(
+                      builder: (context) => const AjustesScreen(),
+                    ),
+                  )
+                  .then((_) {
+                    // Recargar alertas y coberturas cuando se regresa de Ajustes
+                    // para reflejar cambios en las metas
+                    _cargarAlertasYCoberturas();
+                  });
             },
           ),
         ],
@@ -209,9 +218,7 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                           const SizedBox(width: 8),
                           Text(
                             'ERROR DEV - Validación de Consistencia',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
+                            style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.red.shade900,
@@ -223,9 +230,9 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                       Text(
                         _errorValidacion!,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.red.shade900,
-                              fontFamily: 'monospace',
-                            ),
+                          color: Colors.red.shade900,
+                          fontFamily: 'monospace',
+                        ),
                       ),
                     ],
                   ),
@@ -244,9 +251,11 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
               // para que no desaparezca por navegación ni rebuild
               // La alerta solo desaparece cuando se registra una siembra válida o la cobertura deja de ser 🔴
               // Verificamos tanto la cobertura actual como el estado persistente para mantener la persistencia
-              final tieneAlertaPersistente = _alertasActivas.contains(cultivoKey);
+              final tieneAlertaPersistente = _alertasActivas.contains(
+                cultivoKey,
+              );
               final mostrarAlerta = cobertura == '🔴' && tieneAlertaPersistente;
-              
+
               return Card(
                 margin: const EdgeInsets.only(bottom: 12.0),
                 child: Padding(
@@ -259,15 +268,11 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                           Expanded(
                             child: Text(
                               CultivoLabels.obtenerLabel(cultivoKey),
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.bold),
                             ),
                           ),
-                          Text(
-                            cobertura,
-                            style: const TextStyle(fontSize: 24),
-                          ),
+                          Text(cobertura, style: const TextStyle(fontSize: 24)),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -288,7 +293,8 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                             ),
                             child: Text(
                               'Sembrar hoy',
-                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              style: Theme.of(context).textTheme.bodyLarge
+                                  ?.copyWith(
                                     fontWeight: FontWeight.bold,
                                     color: Colors.red.shade900,
                                   ),
@@ -312,8 +318,8 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                     Text(
                       'Stock por Cultivo',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     _buildStockItem('Lechuga', stockLechuga),
@@ -334,18 +340,15 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                     Text(
                       'Stock por Etapa',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     ...Etapa.values.map((etapa) {
                       final stock = motor.calcularStockPorEtapa(etapa);
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),
-                        child: _buildStockItem(
-                          _formatearEtapa(etapa),
-                          stock,
-                        ),
+                        child: _buildStockItem(_formatearEtapa(etapa), stock),
                       );
                     }),
                   ],
@@ -363,8 +366,8 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                     Text(
                       'Movimientos',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     _buildStockItem('Total', totalMovimientos),
@@ -384,16 +387,13 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
+        Text(label, style: Theme.of(context).textTheme.bodyLarge),
         Text(
           valor.toString(),
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
       ],
     );

@@ -1,19 +1,8 @@
 import 'etapa.dart';
 
-enum TipoMovimiento {
-  siembra,
-  traspaso,
-  cosecha,
-  corte,
-  merma,
-  venta,
-}
+enum TipoMovimiento { siembra, traspaso, cosecha, corte, merma, venta }
 
-enum MedioPago {
-  efectivo,
-  transferencia,
-  credito,
-}
+enum MedioPago { efectivo, transferencia, credito }
 
 class Movimiento {
   final String id;
@@ -62,31 +51,21 @@ class Movimiento {
     return Movimiento(
       id: map['id'] as String,
       loteId: map['loteId'] as String,
-      tipo: TipoMovimiento.values.firstWhere(
-        (e) => e.name == map['tipo'],
-      ),
+      tipo: TipoMovimiento.values.firstWhere((e) => e.name == map['tipo']),
       fecha: DateTime.parse(map['fecha'] as String),
       cantidad: map['cantidad'] as int?,
       etapaOrigen: map['etapaOrigen'] != null
-          ? Etapa.values.firstWhere(
-              (e) => e.name == map['etapaOrigen'],
-            )
+          ? Etapa.values.firstWhere((e) => e.name == map['etapaOrigen'])
           : null,
       etapaDestino: map['etapaDestino'] != null
-          ? Etapa.values.firstWhere(
-              (e) => e.name == map['etapaDestino'],
-            )
+          ? Etapa.values.firstWhere((e) => e.name == map['etapaDestino'])
           : null,
       numeroCorte: map['numeroCorte'] as int?,
       precioUnitario: map['precioUnitario'] as double?,
       medioPago: map['medioPago'] != null
-          ? MedioPago.values.firstWhere(
-              (e) => e.name == map['medioPago'],
-            )
+          ? MedioPago.values.firstWhere((e) => e.name == map['medioPago'])
           : null,
       anulado: map['anulado'] as bool,
     );
   }
 }
-
-

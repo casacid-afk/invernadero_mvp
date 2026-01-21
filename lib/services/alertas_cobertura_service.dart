@@ -47,15 +47,14 @@ class AlertasCoberturaService {
   static Future<Set<String>> obtenerAlertasActivas() async {
     final prefs = await SharedPreferences.getInstance();
     final alertasActivas = <String>{};
-    
+
     for (final cultivoKey in CultivoKeys.todas) {
       final activa = prefs.getBool('$_prefsKeyPrefix$cultivoKey') ?? false;
       if (activa) {
         alertasActivas.add(cultivoKey);
       }
     }
-    
+
     return alertasActivas;
   }
 }
-

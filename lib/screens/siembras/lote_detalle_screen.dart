@@ -3,27 +3,22 @@ import 'package:flutter/material.dart';
 import '../../domain/lote.dart';
 import '../../domain/etapa.dart';
 import '../../domain/cultivos.dart';
+import '../../utils/formatters.dart';
 
 class LoteDetalleScreen extends StatelessWidget {
   final Lote lote;
 
-  const LoteDetalleScreen({
-    super.key,
-    required this.lote,
-  });
-
-  String _formatearFecha(DateTime fecha) {
-    final dia = fecha.day.toString().padLeft(2, '0');
-    final mes = fecha.month.toString().padLeft(2, '0');
-    final ano = fecha.year.toString();
-    return '$dia-$mes-$ano';
-  }
+  const LoteDetalleScreen({super.key, required this.lote});
 
   String _formatearEtapa(Etapa etapa) {
-    return etapa.name.replaceAll('_', ' ').split(' ').map((word) {
-      if (word.isEmpty) return '';
-      return word[0].toUpperCase() + word.substring(1);
-    }).join(' ');
+    return etapa.name
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map((word) {
+          if (word.isEmpty) return '';
+          return word[0].toUpperCase() + word.substring(1);
+        })
+        .join(' ');
   }
 
   @override
@@ -31,9 +26,7 @@ class LoteDetalleScreen extends StatelessWidget {
     final cultivoLabel = CultivoLabels.obtenerLabel(lote.cultivoKey);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detalle de Lote'),
-      ),
+      appBar: AppBar(title: const Text('Detalle de Lote')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Card(
@@ -46,8 +39,8 @@ class LoteDetalleScreen extends StatelessWidget {
                 Text(
                   cultivoLabel,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -66,12 +59,12 @@ class LoteDetalleScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Fecha siembra: ${_formatearFecha(lote.fechaSiembra)}',
+                  'Fecha siembra: ${formatoFechaGuiones(lote.fechaSiembra)}',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Inicio etapa: ${_formatearFecha(lote.fechaInicioEtapa)}',
+                  'Inicio etapa: ${formatoFechaGuiones(lote.fechaInicioEtapa)}',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 8),
@@ -92,7 +85,3 @@ class LoteDetalleScreen extends StatelessWidget {
     );
   }
 }
-
-
-
-

@@ -37,7 +37,7 @@ class FirestoreCierresService {
   Future<List<CierreJornada>> cargarCierres() async {
     try {
       final snapshot = await _firestore.collection(_getCollectionPath()).get();
-      
+
       return snapshot.docs
           .map((doc) => CierreJornada.fromMap(doc.data()))
           .toList();
@@ -62,6 +62,3 @@ class FirestoreCierresService {
     }
   }
 }
-
-
-

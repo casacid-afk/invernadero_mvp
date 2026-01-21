@@ -4,13 +4,3 @@ enum Etapa {
   bancada_inicial,
   bancada_final,
 }
-
-
-
-
-
-
-
-
-
-

@@ -110,7 +110,7 @@ class MotorInvernadero {
     final ordenEtapas = Etapa.values;
     final indiceOrigen = ordenEtapas.indexOf(origen);
     final indiceDestino = ordenEtapas.indexOf(destino);
-    
+
     // Solo permitir avanzar hacia adelante (destino > origen)
     return indiceDestino > indiceOrigen;
   }
@@ -174,8 +174,9 @@ class MotorInvernadero {
       _lotes[loteIndex] = loteActualizado;
     } else {
       // Traspaso parcial: reducir cantidad del lote origen y crear sublote en destino
-      final nuevaCantidadOrigen = loteActual.cantidadActual - cantidadATraspasar;
-      
+      final nuevaCantidadOrigen =
+          loteActual.cantidadActual - cantidadATraspasar;
+
       // Actualizar lote origen
       final loteOrigenActualizado = Lote(
         id: loteActual.id,
@@ -468,13 +469,16 @@ class MotorInvernadero {
     }
 
     // Obtener lotes activos del cultivo en etapa final, ordenados por fecha más antigua (FIFO)
-    final lotesDisponibles = _lotes
-        .where((lote) =>
-            lote.activo &&
-            lote.cultivoKey == cultivoKey &&
-            lote.etapaActual == Etapa.bancada_final)
-        .toList()
-      ..sort((a, b) => a.fechaInicioEtapa.compareTo(b.fechaInicioEtapa));
+    final lotesDisponibles =
+        _lotes
+            .where(
+              (lote) =>
+                  lote.activo &&
+                  lote.cultivoKey == cultivoKey &&
+                  lote.etapaActual == Etapa.bancada_final,
+            )
+            .toList()
+          ..sort((a, b) => a.fechaInicioEtapa.compareTo(b.fechaInicioEtapa));
 
     if (lotesDisponibles.isEmpty) {
       throw StateError(
@@ -493,10 +497,9 @@ class MotorInvernadero {
       if (loteIndex == -1) continue;
 
       final loteActual = _lotes[loteIndex];
-      final cantidadADescontar =
-          cantidadRestante < loteActual.cantidadActual
-              ? cantidadRestante
-              : loteActual.cantidadActual;
+      final cantidadADescontar = cantidadRestante < loteActual.cantidadActual
+          ? cantidadRestante
+          : loteActual.cantidadActual;
 
       final nuevaCantidad = loteActual.cantidadActual - cantidadADescontar;
       final nuevoActivo = nuevaCantidad > 0 ? loteActual.activo : false;
@@ -520,10 +523,7 @@ class MotorInvernadero {
     // Registrar movimiento de venta usando el primer lote afectado como referencia
     final loteReferencia = lotesAfectados.isNotEmpty
         ? lotesAfectados.first
-        : _lotes
-            .firstWhere((l) =>
-                l.activo && l.cultivoKey == cultivoKey)
-            .id;
+        : _lotes.firstWhere((l) => l.activo && l.cultivoKey == cultivoKey).id;
 
     final movimiento = Movimiento(
       id: _generarIdMovimiento(),
@@ -577,10 +577,12 @@ class MotorInvernadero {
   /// considerando solo lotes activos en etapa final (bancada_final)
   int calcularStockFinalPorCultivo(String cultivoKey) {
     return _lotes
-        .where((lote) =>
-            lote.activo &&
-            lote.cultivoKey == cultivoKey &&
-            lote.etapaActual == Etapa.bancada_final)
+        .where(
+          (lote) =>
+              lote.activo &&
+              lote.cultivoKey == cultivoKey &&
+              lote.etapaActual == Etapa.bancada_final,
+        )
         .fold(0, (suma, lote) => suma + lote.cantidadActual);
   }
 
@@ -625,19 +627,24 @@ class MotorInvernadero {
     // Verificar si ya existe un cierre para esta fecha
     final fechaInicio = DateTime(fecha.year, fecha.month, fecha.day);
     final fechaFin = fechaInicio.add(const Duration(days: 1));
-    
+
     final existeCierre = _cierresJornada.any(
-      (cierre) => cierre.fecha.isAfter(fechaInicio.subtract(const Duration(milliseconds: 1))) &&
-                  cierre.fecha.isBefore(fechaFin),
+      (cierre) =>
+          cierre.fecha.isAfter(
+            fechaInicio.subtract(const Duration(milliseconds: 1)),
+          ) &&
+          cierre.fecha.isBefore(fechaFin),
     );
-    
+
     if (existeCierre) {
       throw StateError('Ya existe un cierre de jornada para esta fecha');
     }
 
     // Verificar en Firestore si está configurado
     if (_firestoreService != null) {
-      final existeCierreFirestore = await _firestoreService!.existeCierre(fechaInicio);
+      final existeCierreFirestore = await _firestoreService!.existeCierre(
+        fechaInicio,
+      );
       if (existeCierreFirestore) {
         throw StateError('Ya existe un cierre de jornada para esta fecha');
       }
@@ -673,8 +680,11 @@ class MotorInvernadero {
 
     // Verificar si ya existe un cierre para esta fecha (en memoria y Firestore)
     final existeCierreMemoria = _cierresJornada.any(
-      (cierre) => cierre.fecha.isAfter(fechaInicio.subtract(const Duration(milliseconds: 1))) &&
-                  cierre.fecha.isBefore(fechaFin),
+      (cierre) =>
+          cierre.fecha.isAfter(
+            fechaInicio.subtract(const Duration(milliseconds: 1)),
+          ) &&
+          cierre.fecha.isBefore(fechaFin),
     );
 
     if (existeCierreMemoria) {
@@ -683,7 +693,9 @@ class MotorInvernadero {
 
     // Verificar en Firestore si está configurado
     if (_firestoreService != null) {
-      final existeCierreFirestore = await _firestoreService!.existeCierre(fechaInicio);
+      final existeCierreFirestore = await _firestoreService!.existeCierre(
+        fechaInicio,
+      );
       if (existeCierreFirestore) {
         throw StateError('Ya existe un cierre de jornada para esta fecha');
       }
@@ -693,7 +705,9 @@ class MotorInvernadero {
     final ventas = _movimientos.where((movimiento) {
       return movimiento.tipo == TipoMovimiento.venta &&
           !movimiento.anulado &&
-          movimiento.fecha.isAfter(fechaInicio.subtract(const Duration(milliseconds: 1))) &&
+          movimiento.fecha.isAfter(
+            fechaInicio.subtract(const Duration(milliseconds: 1)),
+          ) &&
           movimiento.fecha.isBefore(fechaFin);
     }).toList();
 
@@ -746,4 +760,3 @@ class MotorInvernadero {
     return 'cierre_${DateTime.now().millisecondsSinceEpoch}_$_contadorId';
   }
 }
-
