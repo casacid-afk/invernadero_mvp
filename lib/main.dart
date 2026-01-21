@@ -8,6 +8,7 @@ import 'dev/dev_config.dart';
 import 'services/alertas_cobertura_service.dart';
 import 'services/ajustes_service.dart';
 import 'screens/ajustes/ajustes_screen.dart';
+import 'widgets/cobertura_badge.dart';
 
 void main() {
   runApp(const MyApp());
@@ -40,7 +41,6 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
   late final MotorInvernadero motor;
   DevScenario _scenarioSeleccionado = DevScenario.normal;
   String? _errorValidacion;
-  Set<String> _alertasActivas = {};
   Map<String, String> _coberturas = {};
 
   @override
@@ -65,18 +65,12 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
     }
 
     // Actualizar alertas según cobertura actual
-    // Si cobertura == 🔴, se activa la alerta (persistente)
-    // Si cobertura != 🔴, se desactiva la alerta
+    // Guarda estados persistentes para 🔴 y 🟡
     await AlertasCoberturaService.actualizarAlertasSegunCobertura(coberturas);
-
-    // Cargar alertas activas desde SharedPreferences
-    final alertasActivas =
-        await AlertasCoberturaService.obtenerAlertasActivas();
 
     if (mounted) {
       setState(() {
         _coberturas = coberturas;
-        _alertasActivas = alertasActivas;
       });
     }
   }
@@ -239,22 +233,13 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                 ),
               ),
             if (_errorValidacion != null) const SizedBox(height: 16),
-            // Cards de cultivo con alertas
+            // Cards de cultivo con badges de acción
             ...CultivoKeys.todas.map((cultivoKey) {
               // Recalcular cobertura en tiempo real usando la meta efectiva
               // Nota: esto se calcula de forma síncrona, pero las metas se cargan en _cargarAlertasYCoberturas
               // Para una mejor experiencia, usamos el valor de _coberturas que ya tiene las metas aplicadas
               final cobertura = _coberturas[cultivoKey] ?? '🟢';
               final stock = motor.calcularStockPorCultivo(cultivoKey);
-              // La alerta se muestra si la cobertura es 🔴 (stock == 0)
-              // La persistencia se maneja en SharedPreferences (se actualiza en _cargarAlertasYCoberturas)
-              // para que no desaparezca por navegación ni rebuild
-              // La alerta solo desaparece cuando se registra una siembra válida o la cobertura deja de ser 🔴
-              // Verificamos tanto la cobertura actual como el estado persistente para mantener la persistencia
-              final tieneAlertaPersistente = _alertasActivas.contains(
-                cultivoKey,
-              );
-              final mostrarAlerta = cobertura == '🔴' && tieneAlertaPersistente;
 
               return Card(
                 margin: const EdgeInsets.only(bottom: 12.0),
@@ -273,6 +258,10 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                             ),
                           ),
                           Text(cobertura, style: const TextStyle(fontSize: 24)),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: CoberturaBadge(cobertura: cobertura),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -280,28 +269,6 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                         'Stock: $stock',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
-                      if (mostrarAlerta)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 12.0),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12.0),
-                            decoration: BoxDecoration(
-                              color: Colors.red.shade50,
-                              border: Border.all(color: Colors.red.shade300),
-                              borderRadius: BorderRadius.circular(8.0),
-                            ),
-                            child: Text(
-                              'Sembrar hoy',
-                              style: Theme.of(context).textTheme.bodyLarge
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.red.shade900,
-                                  ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 ),

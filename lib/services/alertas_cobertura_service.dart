@@ -2,59 +2,62 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../domain/cultivos.dart';
 
 /// Servicio para gestionar alertas de cobertura persistentes
-/// Las alertas se muestran cuando cobertura == 🔴 (stock == 0)
-/// y persisten hasta que se registre una siembra válida o la cobertura cambie
+/// Las alertas se muestran cuando cobertura == 🔴 (stock == 0) o 🟡 (stock < meta)
+/// y persisten hasta que la cobertura cambie
 class AlertasCoberturaService {
   static const String _prefsKeyPrefix = 'alerta_cobertura_';
 
-  /// Obtiene el estado de la alerta para un cultivo
-  /// Retorna true si la alerta debe mostrarse
-  static Future<bool> obtenerAlertaActiva(String cultivoKey) async {
+  /// Obtiene el estado de cobertura persistente para un cultivo
+  /// Retorna el emoji de cobertura (🔴, 🟡, 🟢) o null si no hay estado guardado
+  static Future<String?> obtenerEstadoCobertura(String cultivoKey) async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool('$_prefsKeyPrefix$cultivoKey') ?? false;
+    return prefs.getString('$_prefsKeyPrefix$cultivoKey');
   }
 
-  /// Activa la alerta para un cultivo (cuando cobertura == 🔴)
-  static Future<void> activarAlerta(String cultivoKey) async {
+  /// Guarda el estado de cobertura para un cultivo
+  static Future<void> guardarEstadoCobertura(
+    String cultivoKey,
+    String cobertura,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('$_prefsKeyPrefix$cultivoKey', true);
+    await prefs.setString('$_prefsKeyPrefix$cultivoKey', cobertura);
   }
 
-  /// Desactiva la alerta para un cultivo
-  /// Se llama cuando se registra una siembra válida o la cobertura deja de ser 🔴
-  static Future<void> desactivarAlerta(String cultivoKey) async {
+  /// Limpia el estado de cobertura para un cultivo
+  static Future<void> limpiarEstadoCobertura(String cultivoKey) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('$_prefsKeyPrefix$cultivoKey', false);
+    await prefs.remove('$_prefsKeyPrefix$cultivoKey');
   }
 
   /// Actualiza el estado de las alertas basándose en la cobertura actual
-  /// Si cobertura == 🔴 (stock == 0), activa la alerta
-  /// Si cobertura != 🔴, desactiva la alerta
+  /// Guarda el estado persistente para 🔴 y 🟡
+  /// Limpia el estado para 🟢
   static Future<void> actualizarAlertasSegunCobertura(
     Map<String, String> coberturas,
   ) async {
     for (final cultivoKey in CultivoKeys.todas) {
-      final cobertura = coberturas[cultivoKey] ?? '';
-      if (cobertura == '🔴') {
-        await activarAlerta(cultivoKey);
+      final cobertura = coberturas[cultivoKey] ?? '🟢';
+      if (cobertura == '🔴' || cobertura == '🟡') {
+        await guardarEstadoCobertura(cultivoKey, cobertura);
       } else {
-        await desactivarAlerta(cultivoKey);
+        await limpiarEstadoCobertura(cultivoKey);
       }
     }
   }
 
-  /// Obtiene todas las alertas activas
-  static Future<Set<String>> obtenerAlertasActivas() async {
+  /// Obtiene todas las alertas activas (🔴 y 🟡)
+  /// Retorna un mapa con cultivoKey -> cobertura persistente
+  static Future<Map<String, String>> obtenerEstadosCobertura() async {
     final prefs = await SharedPreferences.getInstance();
-    final alertasActivas = <String>{};
+    final estados = <String, String>{};
 
     for (final cultivoKey in CultivoKeys.todas) {
-      final activa = prefs.getBool('$_prefsKeyPrefix$cultivoKey') ?? false;
-      if (activa) {
-        alertasActivas.add(cultivoKey);
+      final estado = prefs.getString('$_prefsKeyPrefix$cultivoKey');
+      if (estado != null && (estado == '🔴' || estado == '🟡')) {
+        estados[cultivoKey] = estado;
       }
     }
 
-    return alertasActivas;
+    return estados;
   }
 }
