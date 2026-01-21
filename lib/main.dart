@@ -164,6 +164,21 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
     }
   }
 
+  /// Cuenta las siembras no anuladas del día actual
+  int _contarSiembrasHoy() {
+    final ahora = DateTime.now();
+    final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+    final manana = hoy.add(const Duration(days: 1));
+
+    return motor.movimientos
+        .where((m) =>
+            m.tipo == TipoMovimiento.siembra &&
+            !m.anulado &&
+            m.fecha.isAfter(hoy.subtract(const Duration(milliseconds: 1))) &&
+            m.fecha.isBefore(manana))
+        .length;
+  }
+
   @override
   Widget build(BuildContext context) {
     final stockLechuga = motor.calcularStockPorCultivo('lechuga');
@@ -326,6 +341,9 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
               );
             }),
             const SizedBox(height: 16),
+            // Card de acceso a Siembras con badge
+            _buildCardSiembras(context),
+            const SizedBox(height: 16),
             // Últimas siembras
             _buildUltimasSiembras(context),
             const SizedBox(height: 16),
@@ -417,6 +435,72 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCardSiembras(BuildContext context) {
+    final siembrasHoy = _contarSiembrasHoy();
+
+    return Card(
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => SiembrasListaScreen(motor: motor),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.eco,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 32,
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    'Siembras',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      'Hoy: ',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    Text(
+                      siembrasHoy.toString(),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

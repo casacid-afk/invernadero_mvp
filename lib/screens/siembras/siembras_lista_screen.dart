@@ -5,7 +5,6 @@ import '../../domain/movimiento.dart';
 import '../../domain/lote.dart';
 import '../../domain/etapa.dart';
 import '../../domain/cultivos.dart';
-import '../../utils/formatters.dart';
 
 class SiembrasListaScreen extends StatelessWidget {
   final MotorInvernadero motor;
@@ -26,6 +25,13 @@ class SiembrasListaScreen extends StatelessWidget {
   String _obtenerCultivoLabel(Lote? lote) {
     if (lote == null) return 'Cultivo desconocido';
     return CultivoLabels.obtenerLabel(lote.cultivoKey);
+  }
+
+  /// Formatea fecha en formato dd-MM (simple, sin año)
+  String _formatearFechaSimple(DateTime fecha) {
+    final dia = fecha.day.toString().padLeft(2, '0');
+    final mes = fecha.month.toString().padLeft(2, '0');
+    return '$dia-$mes';
   }
 
   @override
@@ -56,7 +62,7 @@ class SiembrasListaScreen extends StatelessWidget {
                   lote = null;
                 }
 
-                final fecha = formatoFechaGuiones(movimiento.fecha);
+                final fecha = _formatearFechaSimple(movimiento.fecha);
                 final cultivoLabel = _obtenerCultivoLabel(lote);
                 final cantidad = movimiento.cantidad ?? 0;
                 final etapa =
@@ -69,14 +75,38 @@ class SiembrasListaScreen extends StatelessWidget {
                     vertical: 8,
                   ),
                   child: ListTile(
-                    leading: CircleAvatar(
-                      child: Text(fecha, style: const TextStyle(fontSize: 11)),
+                    title: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            fecha,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            cultivoLabel,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            cantidad.toString(),
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            etapaLabel,
+                            textAlign: TextAlign.end,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
                     ),
-                    title: Text(
-                      cultivoLabel,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text('Cantidad: $cantidad · Etapa: $etapaLabel'),
                   ),
                 );
               },
