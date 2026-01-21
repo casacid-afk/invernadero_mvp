@@ -179,6 +179,40 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
         .length;
   }
 
+  /// Cuenta las siembras del día actual agrupadas por cultivo
+  Map<String, int> _contarSiembrasHoyPorCultivo() {
+    final ahora = DateTime.now();
+    final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+    final manana = hoy.add(const Duration(days: 1));
+
+    // Inicializar el mapa con todos los cultivos en 0
+    final conteo = <String, int>{};
+    for (final cultivoKey in CultivoKeys.todas) {
+      conteo[cultivoKey] = 0;
+    }
+
+    // Filtrar siembras del día y agrupar por cultivo
+    final siembrasHoy = motor.movimientos.where((m) =>
+        m.tipo == TipoMovimiento.siembra &&
+        !m.anulado &&
+        m.fecha.isAfter(hoy.subtract(const Duration(milliseconds: 1))) &&
+        m.fecha.isBefore(manana));
+
+    for (final movimiento in siembrasHoy) {
+      try {
+        final lote = motor.lotes.firstWhere(
+          (l) => l.id == movimiento.loteId,
+        );
+        final cultivoKey = lote.cultivoKey;
+        conteo[cultivoKey] = (conteo[cultivoKey] ?? 0) + 1;
+      } catch (_) {
+        // Si no se encuentra el lote, ignorar el movimiento
+      }
+    }
+
+    return conteo;
+  }
+
   @override
   Widget build(BuildContext context) {
     final stockLechuga = motor.calcularStockPorCultivo('lechuga');
@@ -440,6 +474,7 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
 
   Widget _buildCardSiembras(BuildContext context) {
     final siembrasHoy = _contarSiembrasHoy();
+    final siembrasPorCultivo = _contarSiembrasHoyPorCultivo();
 
     return Card(
       child: InkWell(
@@ -453,48 +488,67 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(
-                    Icons.eco,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: 32,
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.eco,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 32,
+                      ),
+                      const SizedBox(width: 16),
+                      Text(
+                        'Siembras',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 16),
-                  Text(
-                    'Siembras',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          'Hoy: ',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        Text(
+                          siembrasHoy.toString(),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  children: [
-                    Text(
-                      'Hoy: ',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    Text(
-                      siembrasHoy.toString(),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 12),
+              // Desglose por cultivo
+              Text(
+                CultivoKeys.todas
+                    .map((cultivoKey) {
+                      final cantidad = siembrasPorCultivo[cultivoKey] ?? 0;
+                      final label = CultivoLabels.obtenerLabel(cultivoKey);
+                      return '$label: $cantidad';
+                    })
+                    .join('  |  '),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey[700],
                 ),
               ),
             ],
