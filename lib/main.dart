@@ -11,6 +11,9 @@ import 'screens/ajustes/ajustes_screen.dart';
 import 'screens/siembras/siembra_nueva_screen.dart';
 import 'screens/siembras/siembras_lista_screen.dart';
 import 'screens/flujo/flujo_screen.dart';
+import 'screens/ventas_screen.dart';
+import 'screens/traspaso_screen.dart';
+import 'screens/merma_screen.dart';
 import 'domain/movimiento.dart';
 import 'widgets/cobertura_badge.dart';
 
@@ -242,14 +245,211 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
     return estados;
   }
 
+  /// Construye el bloque ACCIÓN con botones para registrar operaciones
+  Widget _buildBloqueAccion(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Acción',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Botón Registrar Siembra
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => SiembraNuevaScreen(motor: motor),
+                    ),
+                  ).then((_) {
+                    setState(() {});
+                    _cargarAlertasYCoberturas();
+                  });
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('+ Registrar siembra'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Botón Registrar Venta
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => VentasScreen(motor: motor),
+                    ),
+                  ).then((_) {
+                    setState(() {});
+                  });
+                },
+                icon: const Icon(Icons.shopping_cart),
+                label: const Text('+ Registrar venta'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Botón Registrar Traspaso
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => TraspasoScreen(motor: motor),
+                    ),
+                  ).then((_) {
+                    setState(() {});
+                  });
+                },
+                icon: const Icon(Icons.swap_horiz),
+                label: const Text('+ Registrar traspaso'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Botón Registrar Merma
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => MermaScreen(motor: motor),
+                    ),
+                  ).then((_) {
+                    setState(() {});
+                  });
+                },
+                icon: const Icon(Icons.remove_circle_outline),
+                label: const Text('+ Registrar merma'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Construye el bloque RESUMEN con cards de Siembras, Alerta y Flujo
+  Widget _buildBloqueResumen(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Card Siembras
+        _buildCardSiembras(context),
+        const SizedBox(height: 12),
+        // Card Alerta siembras
+        _buildCardAlertaSiembras(context),
+        const SizedBox(height: 12),
+        // Card Flujo
+        _buildCardFlujo(context),
+      ],
+    );
+  }
+
+  /// Construye el bloque ESTADO con Stock por cultivo, Stock por etapa y Últimas siembras
+  Widget _buildBloqueEstado(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Stock por cultivo (con coberturas)
+        _buildModuleCard(
+          context: context,
+          title: 'Stock por Cultivo',
+          icon: Icons.inventory_2,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: CultivoKeys.todas.map((cultivoKey) {
+              final cobertura = _coberturas[cultivoKey] ?? '🟢';
+              final stock = motor.calcularStockPorCultivo(cultivoKey);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Text(
+                            CultivoLabels.obtenerLabel(cultivoKey),
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(cobertura, style: const TextStyle(fontSize: 20)),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4.0),
+                            child: CoberturaBadge(
+                              cobertura: cobertura,
+                              onTap: cobertura == '🔴'
+                                  ? () => _abrirSiembraRapida(
+                                      context,
+                                      cultivoKey,
+                                      stock,
+                                    )
+                                  : null,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      stock.toString(),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Stock por etapa
+        _buildModuleCard(
+          context: context,
+          title: 'Stock por Etapa',
+          icon: Icons.layers,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: Etapa.values.map((etapa) {
+              final stock = motor.calcularStockPorEtapa(etapa);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: _buildStockItem(_formatearEtapa(etapa), stock),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Últimas siembras
+        _buildUltimasSiembras(context),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final stockLechuga = motor.calcularStockPorCultivo('lechuga');
-    final stockTomate = motor.calcularStockPorCultivo('tomate');
-    final totalMovimientos = motor.movimientos.length;
-    final movimientosAnulados = motor.movimientos
-        .where((m) => m.anulado)
-        .length;
 
     return Scaffold(
       appBar: AppBar(
@@ -353,142 +553,76 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                 ),
               ),
             if (_errorValidacion != null) const SizedBox(height: 16),
-            // Cards de cultivo con badges de acción
-            ...CultivoKeys.todas.map((cultivoKey) {
-              // Recalcular cobertura en tiempo real usando la meta efectiva
-              // Nota: esto se calcula de forma síncrona, pero las metas se cargan en _cargarAlertasYCoberturas
-              // Para una mejor experiencia, usamos el valor de _coberturas que ya tiene las metas aplicadas
-              final cobertura = _coberturas[cultivoKey] ?? '🟢';
-              final stock = motor.calcularStockPorCultivo(cultivoKey);
-
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12.0),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              CultivoLabels.obtenerLabel(cultivoKey),
-                              style: Theme.of(context).textTheme.titleLarge
-                                  ?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          Text(cobertura, style: const TextStyle(fontSize: 24)),
-                          Padding(
-                            padding: const EdgeInsets.only(left: 8.0),
-                            child: CoberturaBadge(
-                              cobertura: cobertura,
-                              onTap: cobertura == '🔴'
-                                  ? () => _abrirSiembraRapida(
-                                      context,
-                                      cultivoKey,
-                                      stock,
-                                    )
-                                  : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Stock: $stock',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
+            
+            // ========== BLOQUE ACCIÓN ==========
+            _buildBloqueAccion(context),
             const SizedBox(height: 16),
-            // Card de acceso a Siembras con badge
-            _buildCardSiembras(context),
+            
+            // ========== BLOQUE RESUMEN ==========
+            _buildBloqueResumen(context),
             const SizedBox(height: 16),
-            // Card de acceso a Flujo
-            _buildCardFlujo(context),
-            const SizedBox(height: 16),
-            // Alerta siembras hoy
-            _buildCardAlertaSiembras(context),
-            const SizedBox(height: 16),
-            // Últimas siembras
-            _buildUltimasSiembras(context),
-            const SizedBox(height: 16),
-            // Stock por cultivo
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Stock por Cultivo',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildStockItem('Lechuga', stockLechuga),
-                    const SizedBox(height: 8),
-                    _buildStockItem('Tomate', stockTomate),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Stock por etapa
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Stock por Etapa',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ...Etapa.values.map((etapa) {
-                      final stock = motor.calcularStockPorEtapa(etapa);
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: _buildStockItem(_formatearEtapa(etapa), stock),
-                      );
-                    }),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Movimientos
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Movimientos',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildStockItem('Total', totalMovimientos),
-                    const SizedBox(height: 8),
-                    _buildStockItem('Anulados', movimientosAnulados),
-                  ],
-                ),
-              ),
-            ),
+            
+            // ========== BLOQUE ESTADO ==========
+            _buildBloqueEstado(context),
           ],
         ),
       ),
     );
+  }
+
+  /// Widget helper para crear módulos con header consistente
+  Widget _buildModuleCard({
+    required BuildContext context,
+    required String title,
+    required IconData icon,
+    required Widget child,
+    Widget? trailing,
+    VoidCallback? onTap,
+  }) {
+    final content = Padding(
+      padding: const EdgeInsets.all(14.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    icon,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 26,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              if (trailing != null) trailing,
+            ],
+          ),
+          const SizedBox(height: 10),
+          child,
+        ],
+      ),
+    );
+
+    if (onTap != null) {
+      return Card(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: content,
+        ),
+      );
+    }
+
+    return Card(child: content);
   }
 
   Widget _buildStockItem(String label, int valor) {
@@ -511,117 +645,85 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
     final siembrasHoy = _contarSiembrasHoy();
     final siembrasPorCultivo = _contarSiembrasHoyPorCultivo();
 
-    return Card(
-      child: InkWell(
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => SiembrasListaScreen(motor: motor),
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.eco,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 32,
-                      ),
-                      const SizedBox(width: 16),
-                      Text(
-                        'Siembras',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      children: [
-                        Text(
-                          'Hoy: ',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        Text(
-                          siembrasHoy.toString(),
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onPrimaryContainer,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Desglose por cultivo
-              Text(
-                CultivoKeys.todas
-                    .map((cultivoKey) {
-                      final cantidad = siembrasPorCultivo[cultivoKey] ?? 0;
-                      final label = CultivoLabels.obtenerLabel(cultivoKey);
-                      return '$label: $cantidad';
-                    })
-                    .join('  |  '),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[700],
-                ),
-              ),
-            ],
+    final badge = Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Text(
+            'Hoy: ',
+            style: Theme.of(context).textTheme.bodySmall,
           ),
+          Text(
+            siembrasHoy.toString(),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return _buildModuleCard(
+      context: context,
+      title: 'Siembras',
+      icon: Icons.eco,
+      trailing: badge,
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => SiembrasListaScreen(motor: motor),
+          ),
+        );
+      },
+      child: Text(
+        CultivoKeys.todas
+            .map((cultivoKey) {
+              final cantidad = siembrasPorCultivo[cultivoKey] ?? 0;
+              final label = CultivoLabels.obtenerLabel(cultivoKey);
+              return '$label: $cantidad';
+            })
+            .join('  |  '),
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Colors.grey[700],
         ),
       ),
     );
   }
 
   Widget _buildCardFlujo(BuildContext context) {
-    return Card(
-      child: InkWell(
-        onTap: () {
+    return _buildModuleCard(
+      context: context,
+      title: 'Flujo',
+      icon: Icons.timeline,
+      trailing: TextButton(
+        onPressed: () {
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => FlujoScreen(motor: motor),
             ),
           );
         },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Icon(
-                Icons.timeline,
-                color: Theme.of(context).colorScheme.primary,
-                size: 32,
-              ),
-              const SizedBox(width: 16),
-              Text(
-                'Flujo',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+        child: const Text('Abrir'),
+      ),
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => FlujoScreen(motor: motor),
           ),
+        );
+      },
+      child: Text(
+        '7D / 30D',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: Colors.grey[700],
         ),
       ),
     );
@@ -631,195 +733,170 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
     final estados = _calcularEstadoSiembrasHoyPorCultivo();
     final todosOk = estados.values.every((e) => e['estado'] == 'ok');
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Alerta siembras (hoy)',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (todosOk)
-              Row(
-                children: [
-                  const Text('✅'),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Siembras de hoy en meta',
+    // Filtrar cultivos con meta > 0 para evitar ruido
+    final cultivosConMeta = CultivoKeys.todas.where((cultivoKey) {
+      final estado = estados[cultivoKey]!;
+      final meta = estado['meta'] as int;
+      return meta > 0;
+    }).toList();
+
+    Widget content;
+    if (todosOk) {
+      content = Row(
+        children: [
+          const Text('✅'),
+          const SizedBox(width: 8),
+          Text(
+            'Siembras de hoy en meta',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ],
+      );
+    } else {
+      content = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: cultivosConMeta.map((cultivoKey) {
+          final estado = estados[cultivoKey]!;
+          final siembras = estado['siembras'] as int;
+          final meta = estado['meta'] as int;
+          final esOk = estado['estado'] == 'ok';
+          final label = CultivoLabels.obtenerLabel(cultivoKey);
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Row(
+              children: [
+                Text(
+                  esOk ? '✓' : '!',
+                  style: TextStyle(
+                    color: esOk ? Colors.green : Colors.orange,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '$label: $siembras / $meta',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
-                ],
-              )
-            else
-              ...CultivoKeys.todas.map((cultivoKey) {
-                final estado = estados[cultivoKey]!;
-                final siembras = estado['siembras'] as int;
-                final meta = estado['meta'] as int;
-                final esOk = estado['estado'] == 'ok';
-                final label = CultivoLabels.obtenerLabel(cultivoKey);
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      );
+    }
 
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: Row(
-                    children: [
-                      Text(
-                        esOk ? '✓' : '!',
-                        style: TextStyle(
-                          color: esOk ? Colors.green : Colors.orange,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '$label: $siembras / $meta',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-          ],
-        ),
-      ),
+    return _buildModuleCard(
+      context: context,
+      title: 'Alerta siembras (hoy)',
+      icon: Icons.notifications,
+      child: content,
     );
   }
 
   Widget _buildUltimasSiembras(BuildContext context) {
     final ultimasSiembras = _obtenerUltimasSiembras();
 
+    Widget content;
     if (ultimasSiembras.isEmpty) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Últimas siembras',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'No hay siembras registradas',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey,
-                ),
-              ),
-            ],
-          ),
+      content = Text(
+        'No hay siembras registradas',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: Colors.grey,
         ),
+      );
+    } else {
+      content = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: ultimasSiembras.asMap().entries.map((entry) {
+          final index = entry.key;
+          final movimiento = entry.value;
+          final cultivo = _obtenerCultivoDeSiembra(movimiento);
+          final cantidad = movimiento.cantidad ?? 0;
+          final hora = _formatearHora(movimiento.fecha);
+          final esPrimeraSiembra = index == 0;
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    cultivo,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ),
+                Text(
+                  '$cantidad',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  hora,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey,
+                  ),
+                ),
+                if (esPrimeraSiembra) ...[
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: () => _mostrarDialogoDeshacerSiembra(
+                      context,
+                      movimiento,
+                      cultivo,
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text(
+                      'Deshacer',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          );
+        }).toList(),
       );
     }
 
-    return Card(
-      child: InkWell(
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => SiembrasListaScreen(motor: motor),
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Últimas siembras',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => SiembrasListaScreen(motor: motor),
-                        ),
-                      );
-                    },
-                    child: const Text('Ver todas'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              ...ultimasSiembras.asMap().entries.map((entry) {
-                final index = entry.key;
-                final movimiento = entry.value;
-                final cultivo = _obtenerCultivoDeSiembra(movimiento);
-                final cantidad = movimiento.cantidad ?? 0;
-                final hora = _formatearHora(movimiento.fecha);
-                final esPrimeraSiembra = index == 0;
-
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          cultivo,
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                      ),
-                      Text(
-                        '$cantidad',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Text(
-                        hora,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey,
-                        ),
-                      ),
-                      if (esPrimeraSiembra) ...[
-                        const SizedBox(width: 8),
-                        TextButton(
-                          onPressed: () => _mostrarDialogoDeshacerSiembra(
-                            context,
-                            movimiento,
-                            cultivo,
-                          ),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: const Text(
-                            'Deshacer',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ],
-                    ],
+    return _buildModuleCard(
+      context: context,
+      title: 'Últimas siembras',
+      icon: Icons.history,
+      trailing: ultimasSiembras.isNotEmpty
+          ? TextButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => SiembrasListaScreen(motor: motor),
                   ),
                 );
-              }),
-            ],
-          ),
-        ),
-      ),
+              },
+              child: const Text('Ver todas'),
+            )
+          : null,
+      onTap: ultimasSiembras.isNotEmpty
+          ? () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => SiembrasListaScreen(motor: motor),
+                ),
+              );
+            }
+          : null,
+      child: content,
     );
   }
 
@@ -830,11 +907,14 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
   ) async {
     // Calcular cantidad sugerida: max(0, metaEfectiva - stockActual)
     final metaEfectiva = await AjustesService.obtenerMetaEfectiva(cultivoKey);
+    if (!mounted) return;
+    
     final cantidadSugerida = (metaEfectiva - stockActual)
         .clamp(0, double.infinity)
         .toInt();
 
     // Navegar a pantalla de siembra con valores preseleccionados
+    if (!mounted) return;
     final resultado = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => SiembraNuevaScreen(
@@ -847,7 +927,7 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
     );
 
     // Recargar coberturas y alertas al volver
-    if (resultado == true) {
+    if (resultado == true && mounted) {
       _cargarAlertasYCoberturas();
     }
   }
@@ -881,23 +961,21 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
         setState(() {});
         _cargarAlertasYCoberturas();
         
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Siembra anulada'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Siembra anulada'),
+            duration: Duration(seconds: 2),
+          ),
+        );
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al anular siembra: $e'),
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al anular siembra: $e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
       }
     }
   }
