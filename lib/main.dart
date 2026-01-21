@@ -10,6 +10,7 @@ import 'services/ajustes_service.dart';
 import 'screens/ajustes/ajustes_screen.dart';
 import 'screens/siembras/siembra_nueva_screen.dart';
 import 'screens/siembras/siembras_lista_screen.dart';
+import 'screens/flujo/flujo_screen.dart';
 import 'domain/movimiento.dart';
 import 'widgets/cobertura_badge.dart';
 
@@ -378,6 +379,9 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
             // Card de acceso a Siembras con badge
             _buildCardSiembras(context),
             const SizedBox(height: 16),
+            // Card de acceso a Flujo
+            _buildCardFlujo(context),
+            const SizedBox(height: 16),
             // Últimas siembras
             _buildUltimasSiembras(context),
             const SizedBox(height: 16),
@@ -549,6 +553,40 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                     .join('  |  '),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Colors.grey[700],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardFlujo(BuildContext context) {
+    return Card(
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => FlujoScreen(motor: motor),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Icon(
+                Icons.timeline,
+                color: Theme.of(context).colorScheme.primary,
+                size: 32,
+              ),
+              const SizedBox(width: 16),
+              Text(
+                'Flujo',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
