@@ -8,6 +8,7 @@ import 'dev/dev_config.dart';
 import 'services/alertas_cobertura_service.dart';
 import 'services/ajustes_service.dart';
 import 'screens/ajustes/ajustes_screen.dart';
+import 'screens/siembras/siembra_nueva_screen.dart';
 import 'widgets/cobertura_badge.dart';
 
 void main() {
@@ -260,7 +261,16 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                           Text(cobertura, style: const TextStyle(fontSize: 24)),
                           Padding(
                             padding: const EdgeInsets.only(left: 8.0),
-                            child: CoberturaBadge(cobertura: cobertura),
+                            child: CoberturaBadge(
+                              cobertura: cobertura,
+                              onTap: cobertura == '🔴'
+                                  ? () => _abrirSiembraRapida(
+                                      context,
+                                      cultivoKey,
+                                      stock,
+                                    )
+                                  : null,
+                            ),
                           ),
                         ],
                       ),
@@ -364,5 +374,33 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
         ),
       ],
     );
+  }
+
+  Future<void> _abrirSiembraRapida(
+    BuildContext context,
+    String cultivoKey,
+    int stockActual,
+  ) async {
+    // Calcular cantidad sugerida: max(0, metaEfectiva - stockActual)
+    final metaEfectiva = await AjustesService.obtenerMetaEfectiva(cultivoKey);
+    final cantidadSugerida = (metaEfectiva - stockActual)
+        .clamp(0, double.infinity)
+        .toInt();
+
+    // Navegar a pantalla de siembra con valores preseleccionados
+    final resultado = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => SiembraNuevaScreen(
+          motor: motor,
+          initialCultivoKey: cultivoKey,
+          initialCantidad: cantidadSugerida > 0 ? cantidadSugerida : null,
+        ),
+      ),
+    );
+
+    // Recargar coberturas y alertas al volver
+    if (resultado == true) {
+      _cargarAlertasYCoberturas();
+    }
   }
 }

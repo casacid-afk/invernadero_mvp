@@ -5,8 +5,15 @@ import '../../domain/motor_invernadero.dart';
 
 class SiembraNuevaScreen extends StatefulWidget {
   final MotorInvernadero motor;
+  final String? initialCultivoKey;
+  final int? initialCantidad;
 
-  const SiembraNuevaScreen({super.key, required this.motor});
+  const SiembraNuevaScreen({
+    super.key,
+    required this.motor,
+    this.initialCultivoKey,
+    this.initialCantidad,
+  });
 
   @override
   State<SiembraNuevaScreen> createState() => _SiembraNuevaScreenState();
@@ -14,12 +21,30 @@ class SiembraNuevaScreen extends StatefulWidget {
 
 class _SiembraNuevaScreenState extends State<SiembraNuevaScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _cantidadController = TextEditingController();
 
   DateTime _fecha = DateTime.now();
   String? _cultivoKey;
   int? _cantidad;
 
   bool _guardando = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Inicializar valores si vienen como parámetros
+    _cultivoKey = widget.initialCultivoKey;
+    if (widget.initialCantidad != null) {
+      _cantidad = widget.initialCantidad;
+      _cantidadController.text = widget.initialCantidad.toString();
+    }
+  }
+
+  @override
+  void dispose() {
+    _cantidadController.dispose();
+    super.dispose();
+  }
 
   Future<void> _seleccionarFecha(BuildContext context) async {
     final DateTime? fecha = await showDatePicker(
@@ -146,6 +171,7 @@ class _SiembraNuevaScreenState extends State<SiembraNuevaScreen> {
 
               // Cantidad
               TextFormField(
+                controller: _cantidadController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
                   labelText: 'Cantidad',
