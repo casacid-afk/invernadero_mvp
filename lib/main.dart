@@ -486,10 +486,13 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                 ],
               ),
               const SizedBox(height: 12),
-              ...ultimasSiembras.map((movimiento) {
+              ...ultimasSiembras.asMap().entries.map((entry) {
+                final index = entry.key;
+                final movimiento = entry.value;
                 final cultivo = _obtenerCultivoDeSiembra(movimiento);
                 final cantidad = movimiento.cantidad ?? 0;
                 final hora = _formatearHora(movimiento.fecha);
+                final esPrimeraSiembra = index == 0;
 
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8.0),
@@ -515,6 +518,28 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
                           color: Colors.grey,
                         ),
                       ),
+                      if (esPrimeraSiembra) ...[
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: () => _mostrarDialogoDeshacerSiembra(
+                            context,
+                            movimiento,
+                            cultivo,
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            'Deshacer',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 );
@@ -552,6 +577,56 @@ class _InvernaderoHomePageState extends State<InvernaderoHomePage> {
     // Recargar coberturas y alertas al volver
     if (resultado == true) {
       _cargarAlertasYCoberturas();
+    }
+  }
+
+  Future<void> _mostrarDialogoDeshacerSiembra(
+    BuildContext context,
+    Movimiento movimiento,
+    String cultivo,
+  ) async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Anular siembra'),
+        content: Text('¿Anular esta siembra de $cultivo?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Anular'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmado == true && mounted) {
+      try {
+        motor.anularMovimiento(movimiento.id);
+        setState(() {});
+        _cargarAlertasYCoberturas();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Siembra anulada'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al anular siembra: $e'),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
     }
   }
 }
