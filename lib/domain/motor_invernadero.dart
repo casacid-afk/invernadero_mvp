@@ -403,6 +403,23 @@ class MotorInvernadero {
     }
 
     final loteActual = _lotes[loteIndex];
+
+    // Validar que el lote esté activo
+    if (!loteActual.activo) {
+      throw StateError('No se puede registrar merma en un lote inactivo');
+    }
+
+    // Validar cantidad positiva
+    if (cantidad <= 0) {
+      throw ArgumentError('La cantidad a registrar como merma debe ser mayor a 0');
+    }
+
+    // Validar que no se registre más merma de lo disponible
+    if (cantidad > loteActual.cantidadActual) {
+      throw ArgumentError(
+        'No se puede registrar merma de $cantidad unidades. Solo hay ${loteActual.cantidadActual} disponibles en el lote.',
+      );
+    }
     int nuevaCantidad = loteActual.cantidadActual - cantidad;
     if (nuevaCantidad <= 0) {
       nuevaCantidad = 0;
