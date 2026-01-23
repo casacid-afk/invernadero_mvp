@@ -116,10 +116,12 @@ void seed(MotorInvernadero motor, {DevScenario scenario = DevScenario.normal}) {
       fecha: ahora.subtract(const Duration(days: 5)),
     );
     // Acelga usa cortes, no cosecha final
+    // skipValidacionMadurez=true para permitir cortes en seed sin validar madurez
     motor.registrarCorte(
       loteId: 'lote_003',
       cantidad: 25,
       fecha: ahora.subtract(const Duration(days: 3)),
+      skipValidacionMadurez: true,
     );
   } else {
     // Cosecha parcial: solo cosechar una pequeña cantidad

@@ -442,64 +442,67 @@ class MotorInvernadero {
   }
 
   /// Registra un corte de hierbas (modo B): solo desde etapa final, no reduce plantas
-  Movimiento registrarCorte({
+  /// Retorna ResultadoOperacion para manejar errores de forma controlada
+  /// Si skipValidacionMadurez es true, no valida madurez (útil para seed/histórico)
+  ResultadoOperacion<Movimiento> registrarCorte({
     required String loteId,
     required int cantidad,
     required DateTime fecha,
+    bool skipValidacionMadurez = false,
   }) {
     final loteIndex = _lotes.indexWhere((l) => l.id == loteId);
     if (loteIndex == -1) {
-      throw StateError('Lote no encontrado: $loteId');
+      return ResultadoOperacion.error('Lote no encontrado: $loteId');
     }
 
     final loteActual = _lotes[loteIndex];
 
     // Validar que el lote esté activo
     if (!loteActual.activo) {
-      throw StateError('No se puede registrar corte en un lote inactivo');
+      return ResultadoOperacion.error('No se puede registrar corte en un lote inactivo');
     }
 
     // Validar que esté en etapa final
     if (loteActual.etapaActual != Etapa.bancada_final) {
-      throw ArgumentError(
+      return ResultadoOperacion.error(
         'Los cortes solo se pueden realizar desde la etapa final (bancada_final). El lote está en ${loteActual.etapaActual.name}',
       );
     }
 
     // Validar que el cultivo permita cortes
     if (!CultivoConfig.permiteCortes(loteActual.cultivoKey)) {
-      throw ArgumentError(
+      return ResultadoOperacion.error(
         'El cultivo ${loteActual.cultivoKey} no permite cortes. Use crearCosecha() en su lugar.',
       );
     }
 
     // Validar cantidad positiva
     if (cantidad <= 0) {
-      throw ArgumentError('La cantidad del corte debe ser mayor a 0');
+      return ResultadoOperacion.error('La cantidad del corte debe ser mayor a 0');
     }
 
     // Validar máximo de cortes
     if (loteActual.cortesRealizados >= cortesMax) {
-      throw ArgumentError(
+      return ResultadoOperacion.error(
         'Se ha alcanzado el máximo de $cortesMax cortes para este lote. El lote debe ser cerrado.',
       );
     }
 
-    // Validar disponibilidad para corte (madurez e intervalo)
-    if (!disponibleParaCorte(loteActual, fecha)) {
+    // Validar disponibilidad para corte (madurez e intervalo) - solo si no se saltea
+    if (!skipValidacionMadurez && !disponibleParaCorte(loteActual, fecha)) {
       final diasFaltantes = diasFaltantesParaCorte(loteActual, fecha);
       if (diasFaltantes != null && diasFaltantes > 0) {
         if (loteActual.cortesRealizados == 0) {
-          throw ArgumentError(
+          return ResultadoOperacion.error(
             'El lote aún no está maduro para el primer corte. Faltan $diasFaltantes días (requiere $madurezFinalDias días en Bancada Final).',
           );
         } else {
-          throw ArgumentError(
+          return ResultadoOperacion.error(
             'Deben pasar $intervaloCorteDias días entre cortes. Faltan $diasFaltantes días desde el último corte.',
           );
         }
       }
-      throw ArgumentError('El lote no está disponible para corte en este momento.');
+      return ResultadoOperacion.error('El lote no está disponible para corte en este momento.');
     }
 
     final nuevoNumeroCorte = loteActual.cortesRealizados + 1;
@@ -532,7 +535,7 @@ class MotorInvernadero {
     );
 
     _movimientos.add(movimiento);
-    return movimiento;
+    return ResultadoOperacion.exito(movimiento);
   }
 
   Movimiento crearMerma({
