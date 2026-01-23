@@ -23,3 +23,4 @@ double? parsearDouble(String? valor) {
 double parsearDoubleConDefault(String? valor, double valorDefault) {
   return double.tryParse(valor ?? '') ?? valorDefault;
 }
+

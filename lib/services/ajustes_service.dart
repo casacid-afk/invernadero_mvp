@@ -62,3 +62,4 @@ class AjustesService {
     return METAS_DIARIAS_POR_CULTIVO[cultivoKey] ?? 0;
   }
 }
+

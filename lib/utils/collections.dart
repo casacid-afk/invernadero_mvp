@@ -20,3 +20,4 @@ Map<K, List<T>> groupBy<T, K>(List<T> lista, K Function(T) clave) {
   }
   return resultado;
 }
+
