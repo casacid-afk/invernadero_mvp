@@ -84,107 +84,33 @@ class _SiembrasListaScreenState extends State<SiembrasListaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final siembras = _obtenerSiembrasFiltradas();
-
+    // DESACTIVADO TEMPORALMENTE: UI de listado/filtros de siembras
+    // Reemplazado por placeholder simple para estabilizar CAP34
     return Scaffold(
       appBar: AppBar(title: const Text('Siembras')),
-      body: Column(
-        children: [
-          // Filtro rápido
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: SegmentedButton<FiltroSiembras>(
-              segments: const [
-                ButtonSegment<FiltroSiembras>(
-                  value: FiltroSiembras.hoy,
-                  label: Text('HOY'),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Siembras (en revisión)',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
-                ButtonSegment<FiltroSiembras>(
-                  value: FiltroSiembras.dias7,
-                  label: Text('7D'),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Temporalmente desactivado para estabilizar CAP34',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Colors.grey[600],
                 ),
-                ButtonSegment<FiltroSiembras>(
-                  value: FiltroSiembras.todo,
-                  label: Text('TODO'),
-                ),
-              ],
-              selected: {_filtroSeleccionado},
-              onSelectionChanged: (Set<FiltroSiembras> nuevaSeleccion) {
-                setState(() {
-                  _filtroSeleccionado = nuevaSeleccion.first;
-                });
-              },
-            ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
-          // Lista de siembras
-          Expanded(
-            child: siembras.isEmpty
-                ? const Center(child: Text('No hay siembras registradas'))
-                : ListView.builder(
-                    itemCount: siembras.length,
-                    itemBuilder: (context, index) {
-                      final movimiento = siembras[index];
-
-                      Lote? lote;
-                      try {
-                        lote = widget.motor.lotes.firstWhere(
-                          (l) => l.id == movimiento.loteId,
-                        );
-                      } catch (_) {
-                        lote = null;
-                      }
-
-                      final fecha = _formatearFechaSimple(movimiento.fecha);
-                      final cultivoLabel = _obtenerCultivoLabel(lote);
-                      final cantidad = movimiento.cantidad ?? 0;
-                      final etapa =
-                          lote?.etapaActual ?? Etapa.semillero_calefaccionado;
-                      final etapaLabel = _formatearEtapa(etapa);
-
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        child: ListTile(
-                          title: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  fecha,
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                              ),
-                              Expanded(
-                                flex: 2,
-                                child: Text(
-                                  cultivoLabel,
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  cantidad.toString(),
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                              ),
-                              Expanded(
-                                flex: 2,
-                                child: Text(
-                                  etapaLabel,
-                                  textAlign: TextAlign.end,
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
+        ),
       ),
     );
   }
