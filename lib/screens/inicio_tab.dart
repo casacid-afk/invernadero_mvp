@@ -627,8 +627,11 @@ class _InicioTabState extends State<InicioTab> {
           const SizedBox(height: 16),
           
           // ========== MÓDULO SIEMBRAS ==========
-          _buildCardSiembras(context),
-          const SizedBox(height: 12),
+          // DESACTIVADO TEMPORALMENTE: bloque contador/resumen de siembras
+          if (false) ...[
+            _buildCardSiembras(context),
+            const SizedBox(height: 12),
+          ],
           
           // ========== MÓDULO ALERTA SIEMBRAS ==========
           _buildCardAlertaSiembras(context),
