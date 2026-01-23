@@ -15,6 +15,11 @@ class MotorInvernadero {
   int _contadorId = 0;
   FirestoreCierresService? _firestoreService;
 
+  // Constantes de madurez y cortes
+  static const int madurezFinalDias = 30; // Días requeridos en Bancada Final antes de venta/corte
+  static const int intervaloCorteDias = 15; // Días entre cortes
+  static const int cortesMax = 3; // Máximo de cortes permitidos
+
   List<Lote> get lotes => List.unmodifiable(_lotes);
   List<Movimiento> get movimientos => List.unmodifiable(_movimientos);
   List<CierreJornada> get cierresJornada => List.unmodifiable(_cierresJornada);
@@ -72,6 +77,7 @@ class MotorInvernadero {
       fechaSiembra: fecha,
       activo: true,
       cortesRealizados: 0,
+      fechaUltimoCorte: null,
     );
 
     _lotes.add(lote);
@@ -160,6 +166,12 @@ class MotorInvernadero {
 
     if (esTraspasoTotal) {
       // Traspaso total: mover el lote completo
+      // Si es traspaso a Bancada Final, resetear fechaUltimoCorte para cultivos de corte
+      final fechaUltimoCorteReset = (etapaDestino == Etapa.bancada_final &&
+              CultivoConfig.permiteCortes(loteActual.cultivoKey))
+          ? null
+          : loteActual.fechaUltimoCorte;
+
       final loteActualizado = Lote(
         id: loteActual.id,
         cultivoKey: loteActual.cultivoKey,
@@ -169,6 +181,7 @@ class MotorInvernadero {
         fechaSiembra: loteActual.fechaSiembra,
         activo: loteActual.activo,
         cortesRealizados: loteActual.cortesRealizados,
+        fechaUltimoCorte: fechaUltimoCorteReset,
       );
 
       _lotes[loteIndex] = loteActualizado;
@@ -187,11 +200,13 @@ class MotorInvernadero {
         fechaSiembra: loteActual.fechaSiembra,
         activo: true,
         cortesRealizados: loteActual.cortesRealizados,
+        fechaUltimoCorte: loteActual.fechaUltimoCorte,
       );
 
       _lotes[loteIndex] = loteOrigenActualizado;
 
       // Crear sublote en etapa destino
+      // Si es traspaso a Bancada Final, resetear fechaUltimoCorte para cultivos de corte
       final subloteId = _generarIdLote();
       final sublote = Lote(
         id: subloteId,
@@ -202,6 +217,10 @@ class MotorInvernadero {
         fechaSiembra: loteActual.fechaSiembra,
         activo: true,
         cortesRealizados: 0, // Sublote nuevo, sin cortes
+        fechaUltimoCorte: (etapaDestino == Etapa.bancada_final &&
+                CultivoConfig.permiteCortes(loteActual.cultivoKey))
+            ? null
+            : null, // Siempre null para sublote nuevo
       );
 
       _lotes.add(sublote);
@@ -239,6 +258,92 @@ class MotorInvernadero {
     );
   }
 
+  /// Verifica si un lote está disponible para venta (lechuga: maduro en Bancada Final)
+  bool disponibleParaVenta(Lote lote, DateTime fechaReferencia) {
+    // Debe estar en Bancada Final
+    if (lote.etapaActual != Etapa.bancada_final) {
+      return false;
+    }
+
+    // Debe estar activo
+    if (!lote.activo) {
+      return false;
+    }
+
+    // Lechuga: requiere 30 días en Bancada Final
+    if (!CultivoConfig.permiteCortes(lote.cultivoKey)) {
+      final diasEnEtapa = fechaReferencia.difference(lote.fechaInicioEtapa).inDays;
+      return diasEnEtapa >= madurezFinalDias;
+    }
+
+    // Cultivos de corte no se venden directamente (se cortan)
+    return false;
+  }
+
+  /// Verifica si un lote está disponible para corte (hierbas: maduro y con intervalo cumplido)
+  bool disponibleParaCorte(Lote lote, DateTime fechaReferencia) {
+    // Debe estar en Bancada Final
+    if (lote.etapaActual != Etapa.bancada_final) {
+      return false;
+    }
+
+    // Debe estar activo
+    if (!lote.activo) {
+      return false;
+    }
+
+    // Debe permitir cortes
+    if (!CultivoConfig.permiteCortes(lote.cultivoKey)) {
+      return false;
+    }
+
+    // Validar máximo de cortes
+    if (lote.cortesRealizados >= cortesMax) {
+      return false;
+    }
+
+    // Primer corte: requiere 30 días en Bancada Final
+    if (lote.cortesRealizados == 0) {
+      final diasEnEtapa = fechaReferencia.difference(lote.fechaInicioEtapa).inDays;
+      return diasEnEtapa >= madurezFinalDias;
+    }
+
+    // Cortes siguientes: requiere 15 días desde el último corte
+    if (lote.fechaUltimoCorte == null) {
+      return false; // No debería pasar, pero por seguridad
+    }
+
+    final diasDesdeUltimoCorte =
+        fechaReferencia.difference(lote.fechaUltimoCorte!).inDays;
+    return diasDesdeUltimoCorte >= intervaloCorteDias;
+  }
+
+  /// Obtiene los días faltantes para madurez de un lote
+  int? diasFaltantesParaMadurez(Lote lote, DateTime fechaReferencia) {
+    if (lote.etapaActual != Etapa.bancada_final || !lote.activo) {
+      return null;
+    }
+
+    final diasEnEtapa = fechaReferencia.difference(lote.fechaInicioEtapa).inDays;
+    final diasFaltantes = madurezFinalDias - diasEnEtapa;
+    return diasFaltantes > 0 ? diasFaltantes : 0;
+  }
+
+  /// Obtiene los días faltantes para el próximo corte
+  int? diasFaltantesParaCorte(Lote lote, DateTime fechaReferencia) {
+    if (!disponibleParaCorte(lote, fechaReferencia)) {
+      if (lote.cortesRealizados == 0) {
+        return diasFaltantesParaMadurez(lote, fechaReferencia);
+      } else if (lote.fechaUltimoCorte != null) {
+        final diasDesdeUltimoCorte =
+            fechaReferencia.difference(lote.fechaUltimoCorte!).inDays;
+        final diasFaltantes = intervaloCorteDias - diasDesdeUltimoCorte;
+        return diasFaltantes > 0 ? diasFaltantes : 0;
+      }
+    }
+    return 0; // Ya está disponible
+  }
+
   /// Cosecha de lechuga (modo A): solo desde etapa final, reduce stock
   Movimiento crearCosecha({
     required String loteId,
@@ -271,6 +376,14 @@ class MotorInvernadero {
       );
     }
 
+    // Validar madurez: debe tener 30 días en Bancada Final
+    if (!disponibleParaVenta(loteActual, fecha)) {
+      final diasFaltantes = diasFaltantesParaMadurez(loteActual, fecha) ?? 0;
+      throw ArgumentError(
+        'El lote aún no está maduro para venta. Faltan $diasFaltantes días (requiere $madurezFinalDias días en Bancada Final).',
+      );
+    }
+
     // Validar cantidad positiva
     if (cantidad <= 0) {
       throw ArgumentError('La cantidad a cosechar debe ser mayor a 0');
@@ -298,6 +411,7 @@ class MotorInvernadero {
       fechaSiembra: loteActual.fechaSiembra,
       activo: nuevoActivo,
       cortesRealizados: loteActual.cortesRealizados,
+      fechaUltimoCorte: loteActual.fechaUltimoCorte,
     );
 
     _lotes[loteIndex] = loteActualizado;
@@ -353,11 +467,27 @@ class MotorInvernadero {
     }
 
     // Validar máximo de cortes
-    final maxCortes = CultivoConfig.obtenerMaxCortes(loteActual.cultivoKey);
-    if (loteActual.cortesRealizados >= maxCortes) {
+    if (loteActual.cortesRealizados >= cortesMax) {
       throw ArgumentError(
-        'Se ha alcanzado el máximo de $maxCortes cortes para este lote. El lote debe ser cerrado.',
+        'Se ha alcanzado el máximo de $cortesMax cortes para este lote. El lote debe ser cerrado.',
       );
+    }
+
+    // Validar disponibilidad para corte (madurez e intervalo)
+    if (!disponibleParaCorte(loteActual, fecha)) {
+      final diasFaltantes = diasFaltantesParaCorte(loteActual, fecha);
+      if (diasFaltantes != null && diasFaltantes > 0) {
+        if (loteActual.cortesRealizados == 0) {
+          throw ArgumentError(
+            'El lote aún no está maduro para el primer corte. Faltan $diasFaltantes días (requiere $madurezFinalDias días en Bancada Final).',
+          );
+        } else {
+          throw ArgumentError(
+            'Deben pasar $intervaloCorteDias días entre cortes. Faltan $diasFaltantes días desde el último corte.',
+          );
+        }
+      }
+      throw ArgumentError('El lote no está disponible para corte en este momento.');
     }
 
     final nuevoNumeroCorte = loteActual.cortesRealizados + 1;
@@ -373,6 +503,7 @@ class MotorInvernadero {
       fechaSiembra: loteActual.fechaSiembra,
       activo: !alcanzoMaxCortes, // Cerrar si alcanzó el máximo
       cortesRealizados: nuevoNumeroCorte,
+      fechaUltimoCorte: fecha, // Setear fecha del último corte
     );
 
     _lotes[loteIndex] = loteActualizado;
@@ -435,6 +566,7 @@ class MotorInvernadero {
       fechaSiembra: loteActual.fechaSiembra,
       activo: nuevoActivo,
       cortesRealizados: loteActual.cortesRealizados,
+      fechaUltimoCorte: loteActual.fechaUltimoCorte,
     );
 
     _lotes[loteIndex] = loteActualizado;
@@ -475,24 +607,43 @@ class MotorInvernadero {
       throw ArgumentError('Cultivo inválido: $cultivoKey');
     }
 
-    // Calcular stock disponible del cultivo solo en etapa final (bancada_final)
-    final stockDisponible = calcularStockFinalPorCultivo(cultivoKey);
+    // Calcular stock maduro disponible del cultivo (solo lotes maduros en etapa final)
+    final stockDisponible = calcularStockMaduroPorCultivo(cultivoKey, fecha);
 
     // Validar que haya stock suficiente
     if (stockDisponible < cantidad) {
+      // Intentar obtener información de días faltantes para dar mensaje más útil
+      final lotesEnFinal = _lotes.where(
+        (lote) =>
+            lote.activo &&
+            lote.cultivoKey == cultivoKey &&
+            lote.etapaActual == Etapa.bancada_final &&
+            !CultivoConfig.permiteCortes(lote.cultivoKey),
+      ).toList();
+
+      if (lotesEnFinal.isNotEmpty) {
+        final loteEjemplo = lotesEnFinal.first;
+        final diasFaltantes = diasFaltantesParaMadurez(loteEjemplo, fecha);
+        if (diasFaltantes != null && diasFaltantes > 0) {
+          throw StateError(
+            'Stock insuficiente: disponible $stockDisponible (maduro), solicitado $cantidad. Aún no está maduro (faltan $diasFaltantes días).',
+          );
+        }
+      }
+
       throw StateError(
-        'Stock insuficiente: disponible $stockDisponible, solicitado $cantidad (bancada_final)',
+        'Stock insuficiente: disponible $stockDisponible (maduro), solicitado $cantidad',
       );
     }
 
-    // Obtener lotes activos del cultivo en etapa final, ordenados por fecha más antigua (FIFO)
+    // Obtener lotes maduros del cultivo en etapa final, ordenados por fecha más antigua (FIFO)
     final lotesDisponibles =
         _lotes
             .where(
               (lote) =>
                   lote.activo &&
                   lote.cultivoKey == cultivoKey &&
-                  lote.etapaActual == Etapa.bancada_final,
+                  disponibleParaVenta(lote, fecha),
             )
             .toList()
           ..sort((a, b) => a.fechaInicioEtapa.compareTo(b.fechaInicioEtapa));
@@ -599,6 +750,19 @@ class MotorInvernadero {
               lote.activo &&
               lote.cultivoKey == cultivoKey &&
               lote.etapaActual == Etapa.bancada_final,
+        )
+        .fold(0, (suma, lote) => suma + lote.cantidadActual);
+  }
+
+  /// Calcula el stock maduro disponible para venta por cultivo,
+  /// considerando solo lotes activos en etapa final que cumplen madurez
+  int calcularStockMaduroPorCultivo(String cultivoKey, DateTime fechaReferencia) {
+    return _lotes
+        .where(
+          (lote) =>
+              lote.activo &&
+              lote.cultivoKey == cultivoKey &&
+              disponibleParaVenta(lote, fechaReferencia),
         )
         .fold(0, (suma, lote) => suma + lote.cantidadActual);
   }
@@ -775,5 +939,33 @@ class MotorInvernadero {
   String _generarIdCierre() {
     _contadorId++;
     return 'cierre_${DateTime.now().millisecondsSinceEpoch}_$_contadorId';
+  }
+
+  /// MÉTODO DEV: Envejece un lote restando días a fechaInicioEtapa
+  /// Útil para pruebas de madurez sin esperar tiempo real
+  void envejecerLote(String loteId, int diasARestar) {
+    final loteIndex = _lotes.indexWhere((l) => l.id == loteId);
+    if (loteIndex == -1) {
+      throw StateError('Lote no encontrado: $loteId');
+    }
+
+    final loteActual = _lotes[loteIndex];
+    final nuevaFechaInicio = loteActual.fechaInicioEtapa.subtract(
+      Duration(days: diasARestar),
+    );
+
+    final loteActualizado = Lote(
+      id: loteActual.id,
+      cultivoKey: loteActual.cultivoKey,
+      cantidadActual: loteActual.cantidadActual,
+      etapaActual: loteActual.etapaActual,
+      fechaInicioEtapa: nuevaFechaInicio,
+      fechaSiembra: loteActual.fechaSiembra,
+      activo: loteActual.activo,
+      cortesRealizados: loteActual.cortesRealizados,
+      fechaUltimoCorte: loteActual.fechaUltimoCorte,
+    );
+
+    _lotes[loteIndex] = loteActualizado;
   }
 }

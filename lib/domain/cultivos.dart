@@ -37,10 +37,10 @@ class CultivoConfig {
   /// Máximo número de cortes permitidos por cultivo (0 = no permite cortes, solo cosecha final)
   static const Map<String, int> maxCortes = {
     CultivoKeys.lechuga: 0, // Lechuga: solo cosecha final
-    CultivoKeys.cilantro: 4, // Cilantro: permite hasta 4 cortes
-    CultivoKeys.acelga: 4, // Acelga: permite hasta 4 cortes
-    CultivoKeys.rucula: 4, // Rúcula: permite hasta 4 cortes
-    CultivoKeys.perejil: 4, // Perejil: permite hasta 4 cortes
+    CultivoKeys.cilantro: 3, // Cilantro: permite hasta 3 cortes
+    CultivoKeys.acelga: 3, // Acelga: permite hasta 3 cortes
+    CultivoKeys.rucula: 3, // Rúcula: permite hasta 3 cortes
+    CultivoKeys.perejil: 3, // Perejil: permite hasta 3 cortes
   };
 
   /// Obtiene el máximo de cortes permitidos para un cultivo

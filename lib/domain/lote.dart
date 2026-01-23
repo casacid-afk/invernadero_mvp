@@ -9,6 +9,7 @@ class Lote {
   final DateTime fechaSiembra;
   final bool activo;
   final int cortesRealizados;
+  final DateTime? fechaUltimoCorte;
 
   Lote({
     required this.id,
@@ -19,6 +20,7 @@ class Lote {
     required this.fechaSiembra,
     required this.activo,
     this.cortesRealizados = 0,
+    this.fechaUltimoCorte,
   });
 
   Map<String, dynamic> toMap() {
@@ -31,6 +33,7 @@ class Lote {
       'fechaSiembra': fechaSiembra.toIso8601String(),
       'activo': activo,
       'cortesRealizados': cortesRealizados,
+      'fechaUltimoCorte': fechaUltimoCorte?.toIso8601String(),
     };
   }
 
@@ -44,6 +47,9 @@ class Lote {
       fechaSiembra: DateTime.parse(map['fechaSiembra'] as String),
       activo: map['activo'] as bool,
       cortesRealizados: map['cortesRealizados'] as int? ?? 0,
+      fechaUltimoCorte: map['fechaUltimoCorte'] != null
+          ? DateTime.parse(map['fechaUltimoCorte'] as String)
+          : null,
     );
   }
 }

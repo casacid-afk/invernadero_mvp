@@ -122,7 +122,8 @@ class _VentasScreenState extends State<VentasScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Obtener stock total y stock disponible para venta (solo etapa final)
+    // Obtener stock total y stock disponible para venta (solo maduro en etapa final)
+    final ahora = DateTime.now();
     final stocksTotales = <String, int>{};
     final stocksDisponiblesVenta = <String, int>{};
     for (final cultivoKey in CultivoKeys.todas) {
@@ -130,7 +131,7 @@ class _VentasScreenState extends State<VentasScreen> {
         cultivoKey,
       );
       stocksDisponiblesVenta[cultivoKey] = widget.motor
-          .calcularStockFinalPorCultivo(cultivoKey);
+          .calcularStockMaduroPorCultivo(cultivoKey, ahora);
     }
 
     final cultivoSeleccionado = _cultivoSeleccionado;
@@ -211,7 +212,7 @@ class _VentasScreenState extends State<VentasScreen> {
                         Text('Total: $stockTotalSeleccionado unidades'),
                         const SizedBox(height: 4),
                         Text(
-                          'Disponible para venta (etapa final): $stockDisponibleVentaSeleccionado unidades',
+                          'Disponible para venta (maduro): $stockDisponibleVentaSeleccionado unidades',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: stockDisponibleVentaSeleccionado > 0
