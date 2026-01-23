@@ -8,6 +8,23 @@ import 'cierre_jornada.dart';
 // - En scripts CLI: usa stub sin dependencias de Flutter
 import '../services/firestore_cierres_service_export.dart';
 
+/// Resultado de una operación que puede fallar
+class ResultadoOperacion<T> {
+  final bool ok;
+  final T? valor;
+  final String? error;
+
+  ResultadoOperacion._(this.ok, this.valor, this.error);
+
+  factory ResultadoOperacion.exito(T valor) {
+    return ResultadoOperacion._(true, valor, null);
+  }
+
+  factory ResultadoOperacion.error(String mensaje) {
+    return ResultadoOperacion._(false, null, mensaje);
+  }
+}
+
 class MotorInvernadero {
   final List<Lote> _lotes = [];
   final List<Movimiento> _movimientos = [];
@@ -376,13 +393,8 @@ class MotorInvernadero {
       );
     }
 
-    // Validar madurez: debe tener 30 días en Bancada Final
-    if (!disponibleParaVenta(loteActual, fecha)) {
-      final diasFaltantes = diasFaltantesParaMadurez(loteActual, fecha) ?? 0;
-      throw ArgumentError(
-        'El lote aún no está maduro para venta. Faltan $diasFaltantes días (requiere $madurezFinalDias días en Bancada Final).',
-      );
-    }
+    // NO validar madurez en crearCosecha - solo validar en registrarVenta
+    // crearCosecha es una operación interna que puede usarse en seed/histórico
 
     // Validar cantidad positiva
     if (cantidad <= 0) {
@@ -491,7 +503,7 @@ class MotorInvernadero {
     }
 
     final nuevoNumeroCorte = loteActual.cortesRealizados + 1;
-    final alcanzoMaxCortes = nuevoNumeroCorte >= maxCortes;
+    final alcanzoMaxCortes = nuevoNumeroCorte >= cortesMax;
 
     // Actualizar lote: incrementar contador de cortes, cerrar si alcanzó el máximo
     final loteActualizado = Lote(
@@ -585,7 +597,8 @@ class MotorInvernadero {
   }
 
   /// Registra una venta de cultivo: reduce stock desde lotes disponibles en etapa final
-  Movimiento registrarVenta({
+  /// Retorna ResultadoOperacion para manejar errores de forma controlada
+  ResultadoOperacion<Movimiento> registrarVenta({
     required String cultivoKey,
     required int cantidad,
     required double precioUnitario,
@@ -594,17 +607,17 @@ class MotorInvernadero {
   }) {
     // Validar cantidad positiva
     if (cantidad <= 0) {
-      throw ArgumentError('La cantidad a vender debe ser mayor a 0');
+      return ResultadoOperacion.error('La cantidad a vender debe ser mayor a 0');
     }
 
     // Validar precio unitario positivo
     if (precioUnitario <= 0) {
-      throw ArgumentError('El precio unitario debe ser mayor a 0');
+      return ResultadoOperacion.error('El precio unitario debe ser mayor a 0');
     }
 
     // Validar cultivoKey
     if (!CultivoKeys.todas.contains(cultivoKey)) {
-      throw ArgumentError('Cultivo inválido: $cultivoKey');
+      return ResultadoOperacion.error('Cultivo inválido: $cultivoKey');
     }
 
     // Calcular stock maduro disponible del cultivo (solo lotes maduros en etapa final)
@@ -625,13 +638,13 @@ class MotorInvernadero {
         final loteEjemplo = lotesEnFinal.first;
         final diasFaltantes = diasFaltantesParaMadurez(loteEjemplo, fecha);
         if (diasFaltantes != null && diasFaltantes > 0) {
-          throw StateError(
-            'Stock insuficiente: disponible $stockDisponible (maduro), solicitado $cantidad. Aún no está maduro (faltan $diasFaltantes días).',
+          return ResultadoOperacion.error(
+            'Aún no está maduro (faltan $diasFaltantes días). Stock disponible: $stockDisponible, solicitado: $cantidad',
           );
         }
       }
 
-      throw StateError(
+      return ResultadoOperacion.error(
         'Stock insuficiente: disponible $stockDisponible (maduro), solicitado $cantidad',
       );
     }
@@ -649,8 +662,8 @@ class MotorInvernadero {
           ..sort((a, b) => a.fechaInicioEtapa.compareTo(b.fechaInicioEtapa));
 
     if (lotesDisponibles.isEmpty) {
-      throw StateError(
-        'No hay lotes disponibles en etapa final para el cultivo $cultivoKey',
+      return ResultadoOperacion.error(
+        'No hay lotes maduros disponibles en etapa final para el cultivo $cultivoKey',
       );
     }
 
@@ -705,7 +718,7 @@ class MotorInvernadero {
     );
 
     _movimientos.add(movimiento);
-    return movimiento;
+    return ResultadoOperacion.exito(movimiento);
   }
 
   void anularMovimiento(String movimientoId) {

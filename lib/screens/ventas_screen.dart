@@ -74,8 +74,8 @@ class _VentasScreenState extends State<VentasScreen> {
       final cantidad = int.parse(_cantidadController.text);
       final precioUnitario = double.parse(_precioController.text);
 
-      // Registrar la venta
-      widget.motor.registrarVenta(
+      // Registrar la venta (retorna ResultadoOperacion)
+      final resultado = widget.motor.registrarVenta(
         cultivoKey: _cultivoSeleccionado!,
         cantidad: cantidad,
         precioUnitario: precioUnitario,
@@ -83,29 +83,42 @@ class _VentasScreenState extends State<VentasScreen> {
         fecha: DateTime.now(),
       );
 
-      // Mostrar mensaje de éxito
+      // Manejar resultado
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Venta registrada exitosamente'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
+        if (resultado.ok) {
+          // Mostrar mensaje de éxito
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Venta registrada exitosamente'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
 
-        // Limpiar formulario
-        setState(() {
-          _cultivoSeleccionado = null;
-          _cantidadController.clear();
-          _precioController.clear();
-          _medioPagoSeleccionado = null;
-        });
+          // Limpiar formulario
+          setState(() {
+            _cultivoSeleccionado = null;
+            _cantidadController.clear();
+            _precioController.clear();
+            _medioPagoSeleccionado = null;
+          });
+        } else {
+          // Mostrar error controlado
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(resultado.error ?? 'Error al registrar venta'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
       }
     } catch (e) {
+      // Capturar errores inesperados (parseo, etc.)
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
+            content: Text('Error: ${e.toString()}'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 4),
           ),
