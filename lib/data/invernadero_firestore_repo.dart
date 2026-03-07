@@ -39,4 +39,17 @@ class InvernaderoFirestoreRepo {
       ..['origen'] = 'mvp';
     await movimientos.add(doc);
   }
+
+  /// Actualiza la proyección de stock por cultivo en meta/stock_actual (merge).
+  Future<void> guardarStockActualPorCultivo(String cultivoKey, int disponible) async {
+    await meta.doc('stock_actual').set({
+      'cultivos': {
+        cultivoKey: {
+          'disponible': disponible,
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+      },
+      'origen': 'mvp',
+    }, SetOptions(merge: true));
+  }
 }

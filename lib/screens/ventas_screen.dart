@@ -142,6 +142,12 @@ class _VentasScreenState extends State<VentasScreen> {
       } catch (e) {
         debugPrint('Firestore guardarMovimiento: $e');
       }
+      try {
+        final stockActual = widget.motor.calcularStockFinalPorCultivo(_cultivoSeleccionado!);
+        await widget.firestoreRepo.guardarStockActualPorCultivo(_cultivoSeleccionado!, stockActual);
+      } catch (e) {
+        debugPrint('Firestore guardarStockActualPorCultivo: $e');
+      }
 
       if (!mounted) return;
 
