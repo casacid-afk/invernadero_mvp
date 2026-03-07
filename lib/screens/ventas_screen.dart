@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../domain/motor_invernadero.dart';
 import '../domain/cultivos.dart';
 import '../domain/movimiento.dart';
@@ -15,6 +16,12 @@ class VentasScreen extends StatefulWidget {
 
 class _VentasScreenState extends State<VentasScreen> {
   final _formKey = GlobalKey<FormState>();
+
+  static final _formatoClp = NumberFormat.currency(
+    locale: 'es_CL',
+    symbol: r'$ ',
+    decimalDigits: 0,
+  );
 
   String? _cultivoSeleccionado;
   final _cantidadController = TextEditingController();
@@ -344,7 +351,7 @@ class _VentasScreenState extends State<VentasScreen> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                '\$${total.toStringAsFixed(2)}',
+                                _formatoClp.format(total),
                                 style: Theme.of(context)
                                     .textTheme
                                     .headlineMedium
