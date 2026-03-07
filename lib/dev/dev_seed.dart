@@ -108,6 +108,38 @@ void seed(MotorInvernadero motor, {DevScenario scenario = DevScenario.normal}) {
     fecha: ahora.subtract(const Duration(days: 8)),
   );
 
+  // Cilantro, rúcula, perejil: llevar a bancada_inicial y luego bancada_final (stock vendible)
+  motor.crearTraspaso(
+    loteId: 'lote_002',
+    etapaDestino: Etapa.bancada_inicial,
+    fecha: ahora.subtract(const Duration(days: 12)),
+  );
+  motor.crearTraspaso(
+    loteId: 'lote_002',
+    etapaDestino: Etapa.bancada_final,
+    fecha: ahora.subtract(const Duration(days: 11)),
+  );
+  motor.crearTraspaso(
+    loteId: 'lote_004',
+    etapaDestino: Etapa.bancada_inicial,
+    fecha: ahora.subtract(const Duration(days: 10)),
+  );
+  motor.crearTraspaso(
+    loteId: 'lote_004',
+    etapaDestino: Etapa.bancada_final,
+    fecha: ahora.subtract(const Duration(days: 9)),
+  );
+  motor.crearTraspaso(
+    loteId: 'lote_005',
+    etapaDestino: Etapa.bancada_inicial,
+    fecha: ahora.subtract(const Duration(days: 8)),
+  );
+  motor.crearTraspaso(
+    loteId: 'lote_005',
+    etapaDestino: Etapa.bancada_final,
+    fecha: ahora.subtract(const Duration(days: 7)),
+  );
+
   // Cosechas (solo lechuga desde etapa final)
   if (scenario != DevScenario.cosechaParcial) {
     motor.crearCosecha(
