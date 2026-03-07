@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'data/invernadero_firestore_repo.dart';
 import 'domain/motor_invernadero.dart';
 import 'firebase_options.dart';
 import 'screens/home_shell.dart';
@@ -23,7 +24,10 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
         useMaterial3: true,
       ),
-      home: HomeShell(motor: MotorInvernadero()),
+      home: HomeShell(
+        motor: MotorInvernadero(),
+        firestoreRepo: InvernaderoFirestoreRepo(),
+      ),
     );
   }
 }

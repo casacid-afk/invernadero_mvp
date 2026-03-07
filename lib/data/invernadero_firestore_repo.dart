@@ -23,4 +23,12 @@ class InvernaderoFirestoreRepo {
 
   CollectionReference<Map<String, dynamic>> get meta =>
       _envDoc.collection('meta');
+
+  /// Persiste un documento de venta en Firestore. Añade createdAt y origen.
+  Future<void> guardarVenta(Map<String, dynamic> data) async {
+    final doc = Map<String, dynamic>.from(data)
+      ..['createdAt'] = FieldValue.serverTimestamp()
+      ..['origen'] = 'mvp';
+    await ventas.add(doc);
+  }
 }

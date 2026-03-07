@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../data/invernadero_firestore_repo.dart';
 import '../domain/motor_invernadero.dart';
 import 'inicio_tab.dart';
 import 'siembras/siembras_lista_screen.dart';
@@ -8,8 +9,9 @@ import 'movimientos_tab_screen.dart';
 
 class HomeShell extends StatefulWidget {
   final MotorInvernadero motor;
+  final InvernaderoFirestoreRepo firestoreRepo;
 
-  const HomeShell({super.key, required this.motor});
+  const HomeShell({super.key, required this.motor, required this.firestoreRepo});
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -24,9 +26,9 @@ class _HomeShellState extends State<HomeShell> {
       body: IndexedStack(
         index: _selectedIndex,
         children: [
-          InicioTab(motor: widget.motor),
+          InicioTab(motor: widget.motor, firestoreRepo: widget.firestoreRepo),
           SiembrasListaScreen(motor: widget.motor),
-          VentasScreen(motor: widget.motor),
+          VentasScreen(motor: widget.motor, firestoreRepo: widget.firestoreRepo),
           StockTabScreen(motor: widget.motor),
           MovimientosTabScreen(),
         ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../data/invernadero_firestore_repo.dart';
 import '../domain/motor_invernadero.dart';
 import '../domain/cultivos.dart';
 import '../domain/movimiento.dart';
@@ -7,12 +8,22 @@ import '../utils/parsers.dart';
 
 class VentasScreen extends StatefulWidget {
   final MotorInvernadero motor;
+  final InvernaderoFirestoreRepo firestoreRepo;
 
-  const VentasScreen({super.key, required this.motor});
+  const VentasScreen({super.key, required this.motor, required this.firestoreRepo});
 
   @override
   State<VentasScreen> createState() => _VentasScreenState();
 }
+
+/// Promo predefinida: solo datos para UI y registro (cambio mínimo, sin modelo de promos).
+const _promoLechuga3Por5000 = (
+  id: '3_lechugas_5000',
+  label: '3 lechugas por \$ 5.000',
+  cultivoKey: CultivoKeys.lechuga,
+  cantidad: 3,
+  total: 5000,
+);
 
 class _VentasScreenState extends State<VentasScreen> {
   final _formKey = GlobalKey<FormState>();
@@ -24,6 +35,7 @@ class _VentasScreenState extends State<VentasScreen> {
   );
 
   String? _cultivoSeleccionado;
+  String? _promoSeleccionada; // null = sin promo, '3_lechugas_5000' = promo lechuga
   final _cantidadController = TextEditingController();
   final _precioController = TextEditingController();
   MedioPago? _medioPagoSeleccionado;
@@ -78,36 +90,64 @@ class _VentasScreenState extends State<VentasScreen> {
     });
 
     try {
-      final cantidad = int.parse(_cantidadController.text);
-      final precioUnitario = double.parse(_precioController.text);
+      final int cantidad;
+      final double precioUnitario;
+      if (_promoSeleccionada == _promoLechuga3Por5000.id) {
+        cantidad = _promoLechuga3Por5000.cantidad;
+        precioUnitario = _promoLechuga3Por5000.total / _promoLechuga3Por5000.cantidad;
+      } else {
+        cantidad = int.parse(_cantidadController.text);
+        precioUnitario = double.parse(_precioController.text);
+      }
 
-      // Registrar la venta
+      final fecha = DateTime.now();
+      // Registrar la venta (flujo actual en memoria)
       widget.motor.registrarVenta(
         cultivoKey: _cultivoSeleccionado!,
         cantidad: cantidad,
         precioUnitario: precioUnitario,
         medioPago: _medioPagoSeleccionado!,
-        fecha: DateTime.now(),
+        fecha: fecha,
       );
 
-      // Mostrar mensaje de éxito
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Venta registrada exitosamente'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
-
-        // Limpiar formulario
-        setState(() {
-          _cultivoSeleccionado = null;
-          _cantidadController.clear();
-          _precioController.clear();
-          _medioPagoSeleccionado = null;
+      // Persistir en Firestore; si falla no se pierde la venta local
+      try {
+        final total = cantidad * precioUnitario;
+        await widget.firestoreRepo.guardarVenta({
+          'fecha': fecha.toIso8601String(),
+          'total': total,
+          'items': [
+            {
+              'cultivoKey': _cultivoSeleccionado!,
+              'cantidad': cantidad,
+              'precioUnitario': precioUnitario,
+            },
+          ],
+          'medioPago': _medioPagoSeleccionado!.name,
         });
+      } catch (e) {
+        debugPrint('Firestore guardarVenta: $e');
       }
+
+      if (!mounted) return;
+
+      // Mostrar mensaje de éxito
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Venta registrada exitosamente'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      // Limpiar formulario
+      setState(() {
+        _cultivoSeleccionado = null;
+        _promoSeleccionada = null;
+        _cantidadController.clear();
+        _precioController.clear();
+        _medioPagoSeleccionado = null;
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -190,6 +230,7 @@ class _VentasScreenState extends State<VentasScreen> {
                 onChanged: (value) {
                   setState(() {
                     _cultivoSeleccionado = value;
+                    if (value != CultivoKeys.lechuga) _promoSeleccionada = null;
                   });
                 },
                 validator: (value) {
@@ -231,6 +272,37 @@ class _VentasScreenState extends State<VentasScreen> {
                   ),
                 ),
               if (cultivoSeleccionado != null) const SizedBox(height: 16),
+
+              // Selector promo (solo lechuga)
+              if (cultivoSeleccionado == CultivoKeys.lechuga)
+                DropdownButtonFormField<String>(
+                  value: _promoSeleccionada,
+                  decoration: const InputDecoration(
+                    labelText: 'Promo',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.local_offer),
+                  ),
+                  items: [
+                    const DropdownMenuItem<String>(
+                      value: null,
+                      child: Text('Sin promo'),
+                    ),
+                    DropdownMenuItem<String>(
+                      value: _promoLechuga3Por5000.id,
+                      child: Text(_promoLechuga3Por5000.label),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _promoSeleccionada = value;
+                      if (value == _promoLechuga3Por5000.id) {
+                        _cantidadController.text = '${_promoLechuga3Por5000.cantidad}';
+                        _precioController.text = (_promoLechuga3Por5000.total / _promoLechuga3Por5000.cantidad).toStringAsFixed(2);
+                      }
+                    });
+                  },
+                ),
+              if (cultivoSeleccionado == CultivoKeys.lechuga) const SizedBox(height: 16),
 
               // Campo cantidad
               TextFormField(
@@ -323,20 +395,18 @@ class _VentasScreenState extends State<VentasScreen> {
                 ),
               ),
 
-              // Información de total (si hay cantidad y precio)
+              // Información de total (si hay cantidad y precio o promo)
               Builder(
                 builder: (context) {
-                  final cantidad = parsearIntConDefault(
-                    _cantidadController.text,
-                    0,
-                  );
-                  final precio = parsearDoubleConDefault(
-                    _precioController.text,
-                    0.0,
-                  );
-                  final total = cantidad * precio;
+                  final bool esPromoLechuga = _promoSeleccionada == _promoLechuga3Por5000.id;
+                  final cantidad = esPromoLechuga
+                      ? _promoLechuga3Por5000.cantidad
+                      : parsearIntConDefault(_cantidadController.text, 0);
+                  final total = esPromoLechuga
+                      ? _promoLechuga3Por5000.total.toDouble()
+                      : cantidad * parsearDoubleConDefault(_precioController.text, 0.0);
 
-                  if (cantidad > 0 && precio > 0) {
+                  if (cantidad > 0 && total > 0) {
                     return Padding(
                       padding: const EdgeInsets.only(top: 16),
                       child: Card(

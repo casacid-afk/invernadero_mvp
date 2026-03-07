@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../data/invernadero_firestore_repo.dart';
 import '../domain/motor_invernadero.dart';
 import '../domain/movimiento.dart';
 import '../domain/cultivos.dart';
@@ -17,8 +18,9 @@ import 'merma_screen.dart';
 
 class InicioTab extends StatefulWidget {
   final MotorInvernadero motor;
+  final InvernaderoFirestoreRepo firestoreRepo;
 
-  const InicioTab({super.key, required this.motor});
+  const InicioTab({super.key, required this.motor, required this.firestoreRepo});
 
   @override
   State<InicioTab> createState() => _InicioTabState();
@@ -40,9 +42,6 @@ class _InicioTabState extends State<InicioTab> {
   @override
   void initState() {
     super.initState();
-    if (DEV_MODE) {
-      _aplicarSeed();
-    }
     _cargarAlertasYCoberturas();
   }
 
@@ -215,7 +214,7 @@ class _InicioTabState extends State<InicioTab> {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => VentasScreen(motor: widget.motor),
+                      builder: (context) => VentasScreen(motor: widget.motor, firestoreRepo: widget.firestoreRepo),
                     ),
                   ).then((_) {
                     setState(() {});
