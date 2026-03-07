@@ -128,6 +128,20 @@ class _VentasScreenState extends State<VentasScreen> {
       } catch (e) {
         debugPrint('Firestore guardarVenta: $e');
       }
+      try {
+        final total = cantidad * precioUnitario;
+        await widget.firestoreRepo.guardarMovimiento({
+          'tipo': 'venta',
+          'fecha': fecha.toIso8601String(),
+          'cultivoKey': _cultivoSeleccionado!,
+          'cantidad': cantidad,
+          'medioPago': _medioPagoSeleccionado!.name,
+          'total': total,
+          'detalle': 'venta manual mvp',
+        });
+      } catch (e) {
+        debugPrint('Firestore guardarMovimiento: $e');
+      }
 
       if (!mounted) return;
 

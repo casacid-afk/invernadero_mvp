@@ -31,4 +31,12 @@ class InvernaderoFirestoreRepo {
       ..['origen'] = 'mvp';
     await ventas.add(doc);
   }
+
+  /// Persiste un movimiento en Firestore. Añade createdAt y origen.
+  Future<void> guardarMovimiento(Map<String, dynamic> data) async {
+    final doc = Map<String, dynamic>.from(data)
+      ..['createdAt'] = FieldValue.serverTimestamp()
+      ..['origen'] = 'mvp';
+    await movimientos.add(doc);
+  }
 }
