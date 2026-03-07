@@ -19,6 +19,18 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _selectedIndex = 0;
+  /// Respaldo de stock desde Firestore al abrir; preparado para siguiente CAP.
+  Map<String, dynamic>? _respaldoStockActual;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.firestoreRepo.obtenerStockActual().then((data) {
+      if (mounted) setState(() => _respaldoStockActual = data);
+    }).catchError((e) {
+      debugPrint('Firestore obtenerStockActual: $e');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

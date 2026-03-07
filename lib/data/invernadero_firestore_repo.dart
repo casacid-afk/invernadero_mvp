@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class InvernaderoFirestoreRepo {
   InvernaderoFirestoreRepo({
@@ -38,6 +39,20 @@ class InvernaderoFirestoreRepo {
       ..['createdAt'] = FieldValue.serverTimestamp()
       ..['origen'] = 'mvp';
     await movimientos.add(doc);
+  }
+
+  /// Lee el respaldo de stock actual desde meta/stock_actual. Devuelve null si no existe o falla.
+  Future<Map<String, dynamic>?> obtenerStockActual() async {
+    try {
+      final snapshot = await meta.doc('stock_actual').get();
+      if (snapshot.exists && snapshot.data() != null) {
+        return snapshot.data();
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Firestore obtenerStockActual: $e');
+      return null;
+    }
   }
 
   /// Actualiza la proyección de stock por cultivo en meta/stock_actual (merge).
