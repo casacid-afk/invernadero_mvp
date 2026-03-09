@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/invernadero_firestore_repo.dart';
+import '../domain/cultivos.dart';
 import '../domain/motor_invernadero.dart';
 import 'inicio_tab.dart';
 import 'siembras/siembras_lista_screen.dart';
@@ -19,17 +20,47 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _selectedIndex = 0;
-  /// Respaldo de stock desde Firestore al abrir; preparado para siguiente CAP.
-  Map<String, dynamic>? _respaldoStockActual;
 
   @override
   void initState() {
     super.initState();
-    widget.firestoreRepo.obtenerStockActual().then((data) {
-      if (mounted) setState(() => _respaldoStockActual = data);
-    }).catchError((e) {
-      debugPrint('Firestore obtenerStockActual: $e');
-    });
+    _rehidratarDesdeFirestore();
+  }
+
+  Future<void> _rehidratarDesdeFirestore() async {
+    try {
+      final movimientos = await widget.firestoreRepo.obtenerMovimientos();
+
+      if (movimientos.isNotEmpty) {
+        widget.motor.rehidratarDesdeMovimientos(movimientos);
+      } else {
+        final data = await widget.firestoreRepo.obtenerStockActual();
+        final cultivos = data?['cultivos'];
+        final stockPorCultivo = <String, int>{};
+        for (final cultivoKey in CultivoKeys.todas) {
+          int disponible = 0;
+          if (cultivos is Map) {
+            final c = cultivos[cultivoKey];
+            if (c is Map && c['disponible'] != null) {
+              final d = c['disponible'];
+              if (d is int) {
+                disponible = d;
+              } else if (d is num) {
+                disponible = d.toInt();
+              }
+            }
+          }
+          stockPorCultivo[cultivoKey] = disponible;
+        }
+        final tieneStock = stockPorCultivo.values.any((v) => v > 0);
+        if (tieneStock && widget.motor.lotes.isEmpty) {
+          widget.motor.rehidratarStockFinalDesdeMapa(stockPorCultivo);
+        }
+      }
+      if (mounted) setState(() {});
+    } catch (e) {
+      debugPrint('Firestore rehidratación: $e');
+    }
   }
 
   @override
@@ -41,8 +72,8 @@ class _HomeShellState extends State<HomeShell> {
           InicioTab(motor: widget.motor, firestoreRepo: widget.firestoreRepo),
           SiembrasListaScreen(motor: widget.motor),
           VentasScreen(motor: widget.motor, firestoreRepo: widget.firestoreRepo),
-          StockTabScreen(motor: widget.motor),
-          MovimientosTabScreen(),
+          StockTabScreen(motor: widget.motor, firestoreRepo: widget.firestoreRepo),
+          MovimientosTabScreen(firestoreRepo: widget.firestoreRepo),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
