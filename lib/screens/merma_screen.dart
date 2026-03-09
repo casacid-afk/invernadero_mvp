@@ -198,6 +198,7 @@ class _MermaScreenState extends State<MermaScreen> {
               // Selector de lote
               DropdownButtonFormField<String>(
                 value: _loteSeleccionado,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Lote',
                   border: OutlineInputBorder(),
@@ -206,7 +207,11 @@ class _MermaScreenState extends State<MermaScreen> {
                 items: lotesDisponibles.map((lote) {
                   return DropdownMenuItem<String>(
                     value: lote.id,
-                    child: Text(_formatearLote(lote)),
+                    child: Text(
+                      _formatearLote(lote),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
                   );
                 }).toList(),
                 onChanged: (value) {
