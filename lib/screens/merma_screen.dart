@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../data/invernadero_firestore_repo.dart';
 import '../domain/motor_invernadero.dart';
 import '../domain/lote.dart';
 import '../domain/etapa.dart';
@@ -6,8 +7,13 @@ import '../domain/cultivos.dart';
 
 class MermaScreen extends StatefulWidget {
   final MotorInvernadero motor;
+  final InvernaderoFirestoreRepo? firestoreRepo;
 
-  const MermaScreen({super.key, required this.motor});
+  const MermaScreen({
+    super.key,
+    required this.motor,
+    this.firestoreRepo,
+  });
 
   @override
   State<MermaScreen> createState() => _MermaScreenState();
@@ -59,6 +65,7 @@ class _MermaScreenState extends State<MermaScreen> {
   }
 
   void _registrarMerma() async {
+    debugPrint('MERMA TRACE: entro a _registrarMerma');
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -93,11 +100,32 @@ class _MermaScreenState extends State<MermaScreen> {
       }
 
       // Registrar la merma
-      widget.motor.crearMerma(
+      final fecha = DateTime.now();
+      final movimiento = widget.motor.crearMerma(
         loteId: _loteSeleccionado!,
         cantidad: cantidad,
-        fecha: DateTime.now(),
+        fecha: fecha,
       );
+
+      // Persistir en Firestore (movimientos), si hay repo disponible
+      debugPrint('MERMA TRACE: firestoreRepo=${widget.firestoreRepo != null}');
+      if (widget.firestoreRepo != null) {
+        try {
+          debugPrint('MERMA TRACE: voy a guardar movimiento merma');
+          await widget.firestoreRepo!.guardarMovimiento({
+            'tipo': 'merma',
+            'fecha': fecha.toIso8601String(),
+            'loteId': movimiento.loteId,
+            'cultivoKey': lote.cultivoKey,
+            'cantidad': movimiento.cantidad,
+            'etapaOrigen': lote.etapaActual.name,
+            'detalle': 'merma manual mvp',
+          });
+        } catch (e, st) {
+          debugPrint('Firestore guardarMovimiento (merma): $e');
+          debugPrint('$st');
+        }
+      }
 
       // Mostrar mensaje de éxito
       if (mounted) {
