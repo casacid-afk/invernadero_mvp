@@ -56,7 +56,7 @@ class _MovimientosTabScreenState extends State<MovimientosTabScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('Movimientos'),
+        title: const Text('Movimientos de stock'),
       ),
       body: _buildBody(),
     );

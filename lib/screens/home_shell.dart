@@ -103,7 +103,7 @@ class _HomeShellState extends State<HomeShell> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.swap_horiz),
-            label: 'Movimientos',
+            label: 'Mov. stock',
           ),
         ],
       ),
