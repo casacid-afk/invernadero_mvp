@@ -31,6 +31,21 @@ class _InicioTabState extends State<InicioTab> {
   String? _errorValidacion;
   Map<String, String> _coberturas = {};
 
+  // Configuración simple para sugerencia de siembra (MVP)
+  static const Map<String, int> _SEMANAS_CICLO = {
+    CultivoKeys.lechuga: 6,
+    CultivoKeys.cilantro: 10,
+    CultivoKeys.rucula: 10,
+    CultivoKeys.acelga: 10,
+    CultivoKeys.perejil: 10,
+  };
+
+  static const double _STOCK_SEGURIDAD_SEMANAS = 1.0;
+
+  bool _cargandoSugerencias = false;
+  String? _errorSugerencias;
+  Map<String, _SugerenciaSiembra> _sugerencias = {};
+
   /// Metas diarias de siembras por cultivo
   static const Map<String, int> METAS_DIARIAS_POR_CULTIVO = {
     CultivoKeys.lechuga: 5,
@@ -43,6 +58,7 @@ class _InicioTabState extends State<InicioTab> {
   void initState() {
     super.initState();
     _cargarAlertasYCoberturas();
+    _cargarSugerenciasSiembra();
   }
 
   @override
@@ -73,11 +89,126 @@ class _InicioTabState extends State<InicioTab> {
     }
   }
 
-  void _aplicarSeed() {
+  Future<void> _aplicarSeed() async {
     widget.motor.reset();
     seed(widget.motor, scenario: _scenarioSeleccionado);
+    for (final cultivoKey in CultivoKeys.todas) {
+      try {
+        final stockActual = widget.motor.calcularStockFinalPorCultivo(cultivoKey);
+        await widget.firestoreRepo.guardarStockActualPorCultivo(cultivoKey, stockActual);
+      } catch (e) {
+        debugPrint('Firestore guardarStockActualPorCultivo($cultivoKey): $e');
+      }
+    }
     _ejecutarValidaciones();
     _cargarAlertasYCoberturas();
+    _cargarSugerenciasSiembra();
+  }
+
+  Future<void> _cargarSugerenciasSiembra() async {
+    setState(() {
+      _cargandoSugerencias = true;
+      _errorSugerencias = null;
+    });
+
+    try {
+      final ahora = DateTime.now();
+      final desde = ahora.subtract(const Duration(days: 28));
+
+      final movimientos = await widget.firestoreRepo.obtenerMovimientos();
+      final ventasPorCultivo = <String, int>{};
+
+      for (final mov in movimientos) {
+        if (mov['tipo'] != 'venta') continue;
+        final fechaRaw = mov['fecha'];
+        if (fechaRaw is! String) continue;
+        final fecha = DateTime.tryParse(fechaRaw);
+        if (fecha == null || fecha.isBefore(desde)) continue;
+
+        final cultivoKey = mov['cultivoKey']?.toString();
+        if (cultivoKey == null || cultivoKey.isEmpty) continue;
+        final cantidadRaw = mov['cantidad'];
+        final cantidad = cantidadRaw is num ? cantidadRaw.toInt() : 0;
+        if (cantidad <= 0) continue;
+
+        ventasPorCultivo[cultivoKey] =
+            (ventasPorCultivo[cultivoKey] ?? 0) + cantidad;
+      }
+
+      final sugerencias = <String, _SugerenciaSiembra>{};
+
+      for (final cultivoKey in CultivoKeys.todas) {
+        final ventas28Dias = ventasPorCultivo[cultivoKey] ?? 0;
+        final stockTotal = widget.motor.calcularStockPorCultivo(cultivoKey);
+        final stockVendible =
+            widget.motor.calcularStockFinalPorCultivo(cultivoKey);
+        final stockEnProceso = stockTotal - stockVendible;
+
+        if (ventas28Dias == 0) {
+          sugerencias[cultivoKey] = _SugerenciaSiembra(
+            cultivoKey: cultivoKey,
+            ventas28Dias: 0,
+            demandaSemanalPromedio: 0,
+            stockVendible: stockVendible,
+            stockTotal: stockTotal,
+            stockEnProceso: stockEnProceso,
+            coberturaTotalSemanas: 0,
+            siembraSugerida: 0,
+            estado: 'Sin ventas recientes',
+          );
+        } else {
+          final demandaSemanalPromedio = ventas28Dias / 4.0;
+          final baseDemanda = demandaSemanalPromedio;
+
+          final coberturaTotalSemanas = stockTotal / baseDemanda;
+
+          final semanasCiclo = _SEMANAS_CICLO[cultivoKey] ?? 8;
+          final demandaDuranteCiclo =
+              demandaSemanalPromedio * semanasCiclo.toDouble();
+          final stockSeguridad =
+              demandaSemanalPromedio * _STOCK_SEGURIDAD_SEMANAS;
+
+          final siembraSugeridaDouble =
+              demandaDuranteCiclo + stockSeguridad - stockTotal;
+          final siembraSugerida =
+              siembraSugeridaDouble > 0 ? siembraSugeridaDouble.round() : 0;
+
+          String estado;
+          if (coberturaTotalSemanas < semanasCiclo) {
+            estado = 'Sembrar ahora';
+          } else if (coberturaTotalSemanas >=
+              semanasCiclo + _STOCK_SEGURIDAD_SEMANAS) {
+            estado = 'Bien por ahora';
+          } else {
+            estado = 'Vigilar';
+          }
+
+          sugerencias[cultivoKey] = _SugerenciaSiembra(
+            cultivoKey: cultivoKey,
+            ventas28Dias: ventas28Dias,
+            demandaSemanalPromedio: demandaSemanalPromedio,
+            stockVendible: stockVendible,
+            stockTotal: stockTotal,
+            stockEnProceso: stockEnProceso,
+            coberturaTotalSemanas: coberturaTotalSemanas,
+            siembraSugerida: siembraSugerida,
+            estado: estado,
+          );
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _sugerencias = sugerencias;
+        _cargandoSugerencias = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorSugerencias = e.toString();
+        _cargandoSugerencias = false;
+      });
+    }
   }
 
   void _ejecutarValidaciones() {
@@ -192,11 +323,15 @@ class _InicioTabState extends State<InicioTab> {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => SiembraNuevaScreen(motor: widget.motor),
+                      builder: (context) => SiembraNuevaScreen(
+                        motor: widget.motor,
+                        firestoreRepo: widget.firestoreRepo,
+                      ),
                     ),
                   ).then((_) {
                     setState(() {});
                     _cargarAlertasYCoberturas();
+                    _cargarSugerenciasSiembra();
                   });
                 },
                 icon: const Icon(Icons.add),
@@ -218,6 +353,7 @@ class _InicioTabState extends State<InicioTab> {
                     ),
                   ).then((_) {
                     setState(() {});
+                    _cargarSugerenciasSiembra();
                   });
                 },
                 icon: const Icon(Icons.shopping_cart),
@@ -235,10 +371,14 @@ class _InicioTabState extends State<InicioTab> {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => TraspasoScreen(motor: widget.motor),
+                      builder: (context) => TraspasoScreen(
+                        motor: widget.motor,
+                        firestoreRepo: widget.firestoreRepo,
+                      ),
                     ),
                   ).then((_) {
                     setState(() {});
+                    _cargarSugerenciasSiembra();
                   });
                 },
                 icon: const Icon(Icons.swap_horiz),
@@ -256,10 +396,14 @@ class _InicioTabState extends State<InicioTab> {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => MermaScreen(motor: widget.motor),
+                      builder: (context) => MermaScreen(
+                        motor: widget.motor,
+                        firestoreRepo: widget.firestoreRepo,
+                      ),
                     ),
                   ).then((_) {
                     setState(() {});
+                    _cargarSugerenciasSiembra();
                   });
                 },
                 icon: const Icon(Icons.remove_circle_outline),
@@ -418,6 +562,113 @@ class _InicioTabState extends State<InicioTab> {
     );
   }
 
+  Widget _buildCardSugerenciaSiembra(BuildContext context) {
+    Widget content;
+
+    if (_cargandoSugerencias && _sugerencias.isEmpty) {
+      content = const Center(
+        child: Padding(
+          padding: EdgeInsets.all(8.0),
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    } else if (_errorSugerencias != null && _sugerencias.isEmpty) {
+      content = Text(
+        _errorSugerencias!,
+        style: Theme.of(context)
+            .textTheme
+            .bodySmall
+            ?.copyWith(color: Colors.red),
+      );
+    } else {
+      content = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: CultivoKeys.todas.map((cultivoKey) {
+          final s = _sugerencias[cultivoKey];
+          final label = CultivoLabels.obtenerLabel(cultivoKey);
+
+          if (s == null) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Text(
+                '$label: sin datos de ventas recientes',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            );
+          }
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                if (s.ventas28Dias == 0) ...[
+                  Text(
+                    'Sin ventas recientes',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  Text(
+                    'Stock vendible: ${s.stockVendible} u. | En proceso: ${s.stockEnProceso} u.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  Text(
+                    'Sugerencia de siembra: 0 u.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ] else ...[
+                  Text(
+                    'Demanda semanal: ${s.demandaSemanalPromedio.toStringAsFixed(1)} u.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  Text(
+                    'Stock vendible: ${s.stockVendible} u. | En proceso: ${s.stockEnProceso} u.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  Text(
+                    'Cobertura total: ${s.coberturaTotalSemanas.toStringAsFixed(1)} semanas',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  Text(
+                    'Sugerencia de siembra: ${s.siembraSugerida} u.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ],
+                Text(
+                  'Estado: ${s.estado}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: s.estado == 'Sembrar ahora'
+                            ? Colors.red
+                            : s.estado == 'Vigilar'
+                                ? Colors.orange[700]
+                                : Colors.green[700],
+                      ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      );
+    }
+
+    return _buildModuleCard(
+      context: context,
+      title: 'Sugerencia de siembra',
+      icon: Icons.spa,
+      child: content,
+    );
+  }
+
   Widget _buildCardAlertaSiembras(BuildContext context) {
     final estados = _calcularEstadoSiembrasHoyPorCultivo();
     final todosOk = estados.values.every((e) => e['estado'] == 'ok');
@@ -504,6 +755,7 @@ class _InicioTabState extends State<InicioTab> {
       MaterialPageRoute(
         builder: (context) => SiembraNuevaScreen(
           motor: widget.motor,
+          firestoreRepo: widget.firestoreRepo,
           initialCultivoKey: cultivoKey,
           initialCantidad: cantidadSugerida > 0 ? cantidadSugerida : null,
           esSiembraRapida: true,
@@ -574,9 +826,9 @@ class _InicioTabState extends State<InicioTab> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  _aplicarSeed();
-                  setState(() {});
+                onPressed: () async {
+                  await _aplicarSeed();
+                  if (mounted) setState(() {});
                 },
                 icon: const Icon(Icons.refresh),
                 label: const Text('Reset + Seed'),
@@ -633,6 +885,10 @@ class _InicioTabState extends State<InicioTab> {
           _buildCardAlertaSiembras(context),
           const SizedBox(height: 12),
           
+          // ========== MÓDULO SUGERENCIA SIEMBRA ==========
+          _buildCardSugerenciaSiembra(context),
+          const SizedBox(height: 12),
+          
           // ========== MÓDULO FLUJO ==========
           _buildCardFlujo(context),
           ],
@@ -641,4 +897,29 @@ class _InicioTabState extends State<InicioTab> {
     );
   }
 }
+
+class _SugerenciaSiembra {
+  final String cultivoKey;
+  final int ventas28Dias;
+  final double demandaSemanalPromedio;
+  final int stockVendible;
+  final int stockTotal;
+  final int stockEnProceso;
+  final double coberturaTotalSemanas;
+  final int siembraSugerida;
+  final String estado;
+
+  _SugerenciaSiembra({
+    required this.cultivoKey,
+    required this.ventas28Dias,
+    required this.demandaSemanalPromedio,
+    required this.stockVendible,
+    required this.stockTotal,
+    required this.stockEnProceso,
+    required this.coberturaTotalSemanas,
+    required this.siembraSugerida,
+    required this.estado,
+  });
+}
+
 

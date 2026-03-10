@@ -13,9 +13,9 @@ class CoberturaBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (cobertura == '🔴') {
-      return _buildBadge(context, 'Sembrar hoy', Colors.red, onTap: onTap);
+      return _buildBadge(context, 'Sin stock', Colors.red, onTap: onTap);
     } else if (cobertura == '🟡') {
-      return _buildBadge(context, 'Atención', Colors.orange);
+      return _buildBadge(context, 'Stock bajo', Colors.orange);
     }
     // 🟢 o cualquier otro estado: no mostrar badge
     return const SizedBox.shrink();
