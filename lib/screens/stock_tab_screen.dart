@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../data/invernadero_firestore_repo.dart';
 import '../domain/motor_invernadero.dart';
 import '../domain/etapa.dart';
 import '../domain/cultivos.dart';
@@ -9,8 +10,9 @@ import 'siembras/siembra_nueva_screen.dart';
 
 class StockTabScreen extends StatefulWidget {
   final MotorInvernadero motor;
+  final InvernaderoFirestoreRepo firestoreRepo;
 
-  const StockTabScreen({super.key, required this.motor});
+  const StockTabScreen({super.key, required this.motor, required this.firestoreRepo});
 
   @override
   State<StockTabScreen> createState() => _StockTabScreenState();
@@ -135,6 +137,7 @@ class _StockTabScreenState extends State<StockTabScreen> {
       MaterialPageRoute(
         builder: (context) => SiembraNuevaScreen(
           motor: widget.motor,
+          firestoreRepo: widget.firestoreRepo,
           initialCultivoKey: cultivoKey,
           initialCantidad: cantidadSugerida > 0 ? cantidadSugerida : null,
           esSiembraRapida: true,

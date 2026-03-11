@@ -634,6 +634,103 @@ class MotorInvernadero {
     _contadorId = 0;
   }
 
+  /// Carga stock vendible sintético desde un mapa (sin movimientos).
+  /// Limpia lotes y movimientos; crea un lote por cultivo con stock > 0 en bancada_final.
+  void rehidratarStockFinalDesdeMapa(Map<String, int> stockPorCultivo) {
+    _lotes.clear();
+    _movimientos.clear();
+    _contadorId = 0;
+    final ahora = DateTime.now();
+    for (final entry in stockPorCultivo.entries) {
+      if (entry.value <= 0) continue;
+      final lote = Lote(
+        id: 'rehid_${entry.key}',
+        cultivoKey: entry.key,
+        cantidadActual: entry.value,
+        etapaActual: Etapa.bancada_final,
+        fechaInicioEtapa: ahora,
+        fechaSiembra: ahora,
+        activo: true,
+        cortesRealizados: 0,
+      );
+      _lotes.add(lote);
+    }
+  }
+
+  /// Rehidrata el estado del motor aplicando una lista de movimientos
+  /// provenientes de Firestore, en orden ascendente por fecha.
+  /// Actualmente soporta solo tipos 'siembra' y 'venta' tal como se
+  /// persisten en InvernaderoFirestoreRepo.guardarMovimiento().
+  void rehidratarDesdeMovimientos(List<Map<String, dynamic>> movimientosFirestore) {
+    _lotes.clear();
+    _movimientos.clear();
+    _contadorId = 0;
+
+    for (final mov in movimientosFirestore) {
+      final tipo = mov['tipo'];
+      final fechaRaw = mov['fecha'];
+      final fecha = fechaRaw is String ? DateTime.tryParse(fechaRaw) : null;
+      final fechaEfectiva = fecha ?? DateTime.now();
+
+      if (tipo == 'siembra') {
+        final cultivoKey = mov['cultivoKey'] as String?;
+        final cantidadRaw = mov['cantidad'];
+        final cantidad = cantidadRaw is num ? cantidadRaw.toInt() : null;
+        if (cultivoKey == null || cantidad == null) {
+          continue;
+        }
+        try {
+          nuevaSiembra(
+            cultivoKey: cultivoKey,
+            cantidad: cantidad,
+            fecha: fechaEfectiva,
+          );
+        } catch (_) {
+          // Ignorar movimientos inválidos durante la rehidratación
+        }
+      } else if (tipo == 'venta') {
+        final cultivoKey = mov['cultivoKey'] as String?;
+        final cantidadRaw = mov['cantidad'];
+        final cantidad = cantidadRaw is num ? cantidadRaw.toInt() : null;
+        final totalRaw = mov['total'];
+        final total = totalRaw is num ? totalRaw.toDouble() : null;
+        final medioPagoRaw = mov['medioPago'];
+        final medioPagoNombre = medioPagoRaw is String ? medioPagoRaw : null;
+
+        if (cultivoKey == null || cantidad == null || cantidad <= 0 || total == null) {
+          continue;
+        }
+
+        final precioUnitario = total / cantidad;
+
+        MedioPago medioPago;
+        try {
+          medioPago = MedioPago.values.firstWhere(
+            (m) => m.name == medioPagoNombre,
+            orElse: () => MedioPago.efectivo,
+          );
+        } catch (_) {
+          medioPago = MedioPago.efectivo;
+        }
+
+        try {
+          registrarVenta(
+            cultivoKey: cultivoKey,
+            cantidad: cantidad,
+            precioUnitario: precioUnitario,
+            medioPago: medioPago,
+            fecha: fechaEfectiva,
+          );
+        } catch (_) {
+          // Ignorar movimientos inválidos durante la rehidratación
+        }
+      } else {
+        // Tipos de movimiento aún no soportados en rehidratación (traspaso, cosecha, corte, merma).
+        continue;
+      }
+    }
+  }
+
   /// Cierra la jornada de una fecha específica guardando un snapshot de las ventas del día
   Future<CierreJornada> cerrarJornada({
     required DateTime fecha,

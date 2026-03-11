@@ -31,6 +31,9 @@ class InvernaderoFirestoreRepo {
   CollectionReference<Map<String, dynamic>> get clientes =>
       _envDoc.collection('clientes');
 
+  CollectionReference<Map<String, dynamic>> get resumenesCobro =>
+      _envDoc.collection('resumenes_cobro');
+
   /// Persiste un documento de venta en Firestore. Añade createdAt y origen.
   Future<void> guardarVenta(Map<String, dynamic> data) async {
     final doc = Map<String, dynamic>.from(data)
@@ -61,6 +64,70 @@ class InvernaderoFirestoreRepo {
       ..['createdAt'] = FieldValue.serverTimestamp()
       ..['origen'] = 'mvp';
     await clientes.add(doc);
+  }
+
+  /// Persiste un resumen de cobro en Firestore. Añade createdAt y origen.
+  Future<void> guardarResumenCobro(Map<String, dynamic> data) async {
+    final doc = Map<String, dynamic>.from(data)
+      ..['createdAt'] = FieldValue.serverTimestamp()
+      ..['origen'] = 'mvp';
+    await resumenesCobro.add(doc);
+  }
+
+  /// Marca un resumen de cobro como pagado y, si tiene trazabilidad (ventaIds),
+  /// marca también esas ventas como pagadas para mantener consistencia con cuentas por cobrar.
+  ///
+  /// - No modifica resúmenes legacy sin ventaIds (en ese caso solo se actualiza el propio resumen).
+  Future<void> marcarResumenCobroComoPagado(
+    String resumenId, {
+    required String medioPago,
+    String? observacionPago,
+  }) async {
+    try {
+      final snapshot = await resumenesCobro.doc(resumenId).get();
+      if (!snapshot.exists || snapshot.data() == null) {
+        return;
+      }
+      final data = snapshot.data()!;
+      final dynamic ventaIdsRaw = data['ventaIds'];
+      List<String> ventaIds = [];
+      if (ventaIdsRaw is List) {
+        ventaIds = ventaIdsRaw
+            .map((e) => e?.toString())
+            .whereType<String>()
+            .where((e) => e.isNotEmpty)
+            .toList();
+      }
+
+      final obs = observacionPago?.trim();
+
+      final batch = _firestore.batch();
+
+      // Actualizar resumen
+      final resumenRef = resumenesCobro.doc(resumenId);
+      batch.update(resumenRef, {
+        'estado': 'pagado',
+        'fechaPago': FieldValue.serverTimestamp(),
+        'medioPago': medioPago,
+        if (obs != null && obs.isNotEmpty) 'observacionPago': obs,
+      });
+
+      // Actualizar ventas asociadas si hay trazabilidad
+      for (final ventaId in ventaIds) {
+        final ventaRef = ventas.doc(ventaId);
+        batch.update(ventaRef, {
+          'estadoCobro': 'pagada',
+          'fechaPago': FieldValue.serverTimestamp(),
+          'medioPago': medioPago,
+          if (obs != null && obs.isNotEmpty) 'observacionPago': obs,
+        });
+      }
+
+      await batch.commit();
+    } catch (e) {
+      debugPrint('Firestore marcarResumenCobroComoPagado: $e');
+      rethrow;
+    }
   }
 
   /// Valor de stock disponible desde el respaldo para un cultivo, o null si no hay.
@@ -326,6 +393,67 @@ class InvernaderoFirestoreRepo {
           }).toList();
 
       return items;
+    }
+  }
+
+  /// Obtiene todas las ventas a crédito abiertas para un cliente específico.
+  Future<List<Map<String, dynamic>>> obtenerVentasCreditoAbiertasPorCliente(
+      String clienteId) async {
+    try {
+      final snapshot = await ventas
+          .where('medioPago', isEqualTo: 'credito')
+          .where('estadoCobro', isEqualTo: 'abierta')
+          .where('clienteId', isEqualTo: clienteId)
+          .get();
+      return snapshot.docs
+          .map((doc) => {
+                'id': doc.id,
+                ...doc.data(),
+              })
+          .toList();
+    } catch (e) {
+      debugPrint(
+          'Firestore obtenerVentasCreditoAbiertasPorCliente falló, filtrando en memoria: $e');
+      final snapshot = await ventas.get();
+      final items = snapshot.docs
+          .map((doc) => {
+                'id': doc.id,
+                ...doc.data(),
+              })
+          .where((data) {
+            final medioPago = data['medioPago']?.toString();
+            final estadoCobro = data['estadoCobro']?.toString();
+            final cid = data['clienteId']?.toString();
+            return medioPago == 'credito' &&
+                estadoCobro == 'abierta' &&
+                cid == clienteId;
+          }).toList();
+
+      return items;
+    }
+  }
+
+  /// Marca todas las ventas a crédito abiertas de un cliente como pagadas.
+  Future<void> marcarVentasClienteComoPagadas(String clienteId) async {
+    try {
+      final ahora = DateTime.now().toIso8601String();
+      final snapshot = await ventas
+          .where('medioPago', isEqualTo: 'credito')
+          .where('estadoCobro', isEqualTo: 'abierta')
+          .where('clienteId', isEqualTo: clienteId)
+          .get();
+
+      final batch = _firestore.batch();
+      for (final doc in snapshot.docs) {
+        batch.update(doc.reference, {
+          'estadoCobro': 'pagada',
+          'fechaPago': ahora,
+        });
+      }
+      await batch.commit();
+    } catch (e) {
+      debugPrint('Firestore marcarVentasClienteComoPagadas: $e');
+      rethrow;
     }
   }
 

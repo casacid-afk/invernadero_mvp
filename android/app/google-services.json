@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "307635715036",
+    "project_id": "invernadero-cisnes",
+    "storage_bucket": "invernadero-cisnes.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:307635715036:android:90757ad1867a40a0f8ed19",
+        "android_client_info": {
+          "package_name": "com.example.gin_venta"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBeq21NUNg-9zZ-BH0wQAiIcFnDKh0f29U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:307635715036:android:42bb2963dc2849e7f8ed19",
+        "android_client_info": {
+          "package_name": "com.example.invernadero_cisnes"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBeq21NUNg-9zZ-BH0wQAiIcFnDKh0f29U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:307635715036:android:c5dbdeaa87c89e6df8ed19",
+        "android_client_info": {
+          "package_name": "com.example.invernadero_mvp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBeq21NUNg-9zZ-BH0wQAiIcFnDKh0f29U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

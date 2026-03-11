@@ -19,6 +19,7 @@ import 'gastos_screen.dart';
 import 'resumen_economico_screen.dart';
 import 'clientes_screen.dart';
 import 'cuentas_por_cobrar_screen.dart';
+import 'resumenes_cobro_screen.dart';
 
 class InicioTab extends StatefulWidget {
   final MotorInvernadero motor;
@@ -510,6 +511,27 @@ class _InicioTabState extends State<InicioTab> {
                 },
                 icon: const Icon(Icons.receipt_long),
                 label: const Text('Cuentas por cobrar'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Botón Resúmenes de cobro
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => ResumenesCobroScreen(
+                        firestoreRepo: widget.firestoreRepo,
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.description),
+                label: const Text('Resúmenes de cobro'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),

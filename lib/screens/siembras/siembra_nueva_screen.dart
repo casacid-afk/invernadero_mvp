@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../data/invernadero_firestore_repo.dart';
 import '../../domain/cultivos.dart';
 import '../../domain/motor_invernadero.dart';
 
 class SiembraNuevaScreen extends StatefulWidget {
   final MotorInvernadero motor;
+  final InvernaderoFirestoreRepo? firestoreRepo;
   final String? initialCultivoKey;
   final int? initialCantidad;
   final bool esSiembraRapida;
@@ -12,6 +14,7 @@ class SiembraNuevaScreen extends StatefulWidget {
   const SiembraNuevaScreen({
     super.key,
     required this.motor,
+    this.firestoreRepo,
     this.initialCultivoKey,
     this.initialCantidad,
     this.esSiembraRapida = false,
@@ -139,11 +142,44 @@ class _SiembraNuevaScreenState extends State<SiembraNuevaScreen> {
     });
 
     try {
-      widget.motor.nuevaSiembra(
+      final movimiento = widget.motor.nuevaSiembra(
         cultivoKey: _cultivoKey!,
         cantidad: _cantidad!,
         fecha: _fecha,
       );
+
+      if (widget.firestoreRepo != null) {
+        try {
+          await widget.firestoreRepo!.guardarMovimiento({
+            'tipo': 'siembra',
+            'fecha': _fecha.toIso8601String(),
+            'loteId': movimiento.loteId,
+            'cultivoKey': _cultivoKey!,
+            'cantidad': _cantidad!,
+            'etapaDestino': 'semillero_calefaccionado',
+            'detalle': 'siembra manual mvp',
+          });
+          final disponible = widget.motor.calcularStockFinalPorCultivo(_cultivoKey!);
+          final enProceso = widget.motor.calcularStockPorCultivo(_cultivoKey!);
+          await widget.firestoreRepo!.guardarStockActualDetallePorCultivo(
+            cultivoKey: _cultivoKey!,
+            disponible: disponible,
+            enProceso: enProceso,
+          );
+        } catch (_) {
+          if (!mounted) return;
+          scaffoldMessenger.showSnackBar(
+            const SnackBar(
+              content: Text('La siembra quedó local pero no sincronizada'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          setState(() {
+            _guardando = false;
+          });
+          return;
+        }
+      }
 
       // Mostrar diálogo de confirmación
       await _mostrarDialogoConfirmacion(context, _cantidad!, _cultivoKey!);

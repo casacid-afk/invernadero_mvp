@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../data/invernadero_firestore_repo.dart';
 import '../domain/motor_invernadero.dart';
 import '../domain/lote.dart';
 import '../domain/etapa.dart';
@@ -6,8 +7,13 @@ import '../domain/cultivos.dart';
 
 class TraspasoScreen extends StatefulWidget {
   final MotorInvernadero motor;
+  final InvernaderoFirestoreRepo? firestoreRepo;
 
-  const TraspasoScreen({super.key, required this.motor});
+  const TraspasoScreen({
+    super.key,
+    required this.motor,
+    this.firestoreRepo,
+  });
 
   @override
   State<TraspasoScreen> createState() => _TraspasoScreenState();
@@ -119,12 +125,31 @@ class _TraspasoScreenState extends State<TraspasoScreen> {
       }
 
       // Registrar el traspaso
-      widget.motor.crearTraspaso(
+      final fecha = DateTime.now();
+      final movimiento = widget.motor.crearTraspaso(
         loteId: _loteSeleccionado!,
         etapaDestino: _etapaDestinoSeleccionada!,
-        fecha: DateTime.now(),
+        fecha: fecha,
         cantidad: cantidad,
       );
+
+      // Persistir en Firestore (movimientos), si hay repo disponible
+      if (widget.firestoreRepo != null) {
+        try {
+          await widget.firestoreRepo!.guardarMovimiento({
+            'tipo': 'traspaso',
+            'fecha': fecha.toIso8601String(),
+            'loteId': movimiento.loteId,
+            'cultivoKey': lote.cultivoKey,
+            'cantidad': movimiento.cantidad,
+            'etapaOrigen': movimiento.etapaOrigen?.name,
+            'etapaDestino': movimiento.etapaDestino?.name,
+            'detalle': 'traspaso manual mvp',
+          });
+        } catch (e) {
+          debugPrint('Firestore guardarMovimiento (traspaso): $e');
+        }
+      }
 
       // Mostrar mensaje de éxito
       if (mounted) {
