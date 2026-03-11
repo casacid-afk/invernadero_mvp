@@ -42,11 +42,42 @@ class _VentasScreenState extends State<VentasScreen> {
 
   bool _isLoading = false;
 
+  List<Map<String, dynamic>> _clientesActivos = [];
+  bool _cargandoClientes = false;
+  String? _clienteSeleccionadoId;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarClientesActivos();
+  }
+
   @override
   void dispose() {
     _cantidadController.dispose();
     _precioController.dispose();
     super.dispose();
+  }
+
+  Future<void> _cargarClientesActivos() async {
+    setState(() {
+      _cargandoClientes = true;
+    });
+    try {
+      final items = await widget.firestoreRepo.obtenerClientesActivos();
+      if (!mounted) return;
+      setState(() {
+        _clientesActivos = items;
+      });
+    } catch (e) {
+      debugPrint('Error al cargar clientes activos: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _cargandoClientes = false;
+        });
+      }
+    }
   }
 
   String _formatearMedioPago(MedioPago medio) {
@@ -85,6 +116,17 @@ class _VentasScreenState extends State<VentasScreen> {
       return;
     }
 
+    if (_medioPagoSeleccionado == MedioPago.credito &&
+        (_clienteSeleccionadoId == null || _clienteSeleccionadoId!.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor seleccione un cliente para la venta a crédito'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -101,6 +143,20 @@ class _VentasScreenState extends State<VentasScreen> {
       }
 
       final fecha = DateTime.now();
+      String? clienteId;
+      String? clienteNombre;
+      if (_medioPagoSeleccionado == MedioPago.credito &&
+          _clienteSeleccionadoId != null) {
+        clienteId = _clienteSeleccionadoId;
+        final cliente = _clientesActivos.firstWhere(
+          (c) => c['id'] == clienteId,
+          orElse: () => {},
+        );
+        final nombre = cliente['nombre'];
+        if (nombre != null) {
+          clienteNombre = nombre.toString();
+        }
+      }
       // Registrar la venta (flujo actual en memoria)
       widget.motor.registrarVenta(
         cultivoKey: _cultivoSeleccionado!,
@@ -124,6 +180,10 @@ class _VentasScreenState extends State<VentasScreen> {
             },
           ],
           'medioPago': _medioPagoSeleccionado!.name,
+          if (clienteId != null) 'clienteId': clienteId,
+          if (clienteNombre != null) 'clienteNombre': clienteNombre,
+          if (_medioPagoSeleccionado == MedioPago.credito)
+            'estadoCobro': 'abierta',
         });
       } catch (e) {
         debugPrint('Firestore guardarVenta: $e');
@@ -136,6 +196,10 @@ class _VentasScreenState extends State<VentasScreen> {
           'cultivoKey': _cultivoSeleccionado!,
           'cantidad': cantidad,
           'medioPago': _medioPagoSeleccionado!.name,
+          if (clienteId != null) 'clienteId': clienteId,
+          if (clienteNombre != null) 'clienteNombre': clienteNombre,
+          if (_medioPagoSeleccionado == MedioPago.credito)
+            'estadoCobro': 'abierta',
           'total': total,
           'detalle': 'venta manual mvp',
         });
@@ -167,6 +231,7 @@ class _VentasScreenState extends State<VentasScreen> {
         _cantidadController.clear();
         _precioController.clear();
         _medioPagoSeleccionado = null;
+        _clienteSeleccionadoId = null;
       });
     } catch (e) {
       if (mounted) {
@@ -189,18 +254,16 @@ class _VentasScreenState extends State<VentasScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Obtener stock total y stock disponible para venta (solo etapa final)
+    // Obtener stock total y disponible para venta desde el motor
     final stocksTotales = <String, int>{};
     final stocksDisponiblesVenta = <String, int>{};
     for (final cultivoKey in CultivoKeys.todas) {
-      stocksTotales[cultivoKey] = widget.motor.calcularStockPorCultivo(
-        cultivoKey,
-      );
-      stocksDisponiblesVenta[cultivoKey] = widget.motor
-          .calcularStockFinalPorCultivo(cultivoKey);
+      stocksTotales[cultivoKey] = widget.motor.calcularStockPorCultivo(cultivoKey);
+      stocksDisponiblesVenta[cultivoKey] =
+          widget.motor.calcularStockFinalPorCultivo(cultivoKey);
     }
-
     final cultivoSeleccionado = _cultivoSeleccionado;
+
     final stockTotalSeleccionado = cultivoSeleccionado != null
         ? (stocksTotales[cultivoSeleccionado] ?? 0)
         : 0;
@@ -208,10 +271,11 @@ class _VentasScreenState extends State<VentasScreen> {
         ? (stocksDisponiblesVenta[cultivoSeleccionado] ?? 0)
         : 0;
 
+    // Habilitar botón solo si el motor tiene stock (acción usa motor, no respaldo)
     final puedeRegistrarVenta =
         !_isLoading &&
         cultivoSeleccionado != null &&
-        stockDisponibleVentaSeleccionado > 0;
+        widget.motor.calcularStockFinalPorCultivo(cultivoSeleccionado!) > 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -387,6 +451,9 @@ class _VentasScreenState extends State<VentasScreen> {
                 onChanged: (value) {
                   setState(() {
                     _medioPagoSeleccionado = value;
+                    if (value != MedioPago.credito) {
+                      _clienteSeleccionadoId = null;
+                    }
                   });
                 },
                 validator: (value) {
@@ -396,6 +463,40 @@ class _VentasScreenState extends State<VentasScreen> {
                   return null;
                 },
               ),
+              if (_medioPagoSeleccionado == MedioPago.credito) ...[
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: _clienteSeleccionadoId,
+                  decoration: const InputDecoration(
+                    labelText: 'Cliente',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.person),
+                  ),
+                  items: _clientesActivos.map((c) {
+                    final id = c['id']?.toString();
+                    final nombre = c['nombre']?.toString() ?? '';
+                    return DropdownMenuItem<String>(
+                      value: id,
+                      child: Text(nombre),
+                    );
+                  }).toList(),
+                  onChanged: _cargandoClientes
+                      ? null
+                      : (value) {
+                          setState(() {
+                            _clienteSeleccionadoId = value;
+                          });
+                        },
+                  validator: (value) {
+                    if (_medioPagoSeleccionado == MedioPago.credito) {
+                      if (value == null || value.isEmpty) {
+                        return 'Por favor seleccione un cliente';
+                      }
+                    }
+                    return null;
+                  },
+                ),
+              ],
               const SizedBox(height: 24),
 
               // Botón registrar venta
