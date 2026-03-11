@@ -155,4 +155,124 @@ class InvernaderoFirestoreRepo {
       return items;
     }
   }
+
+  /// Lee las ventas en el rango [desde, hasta], inclusive.
+  /// Intenta filtrar/ordenar por fecha en la consulta; si no es posible por compatibilidad de datos,
+  /// filtra y ordena en memoria usando el campo 'fecha' (ISO8601 String).
+  Future<List<Map<String, dynamic>>> obtenerVentasEnRango({
+    required DateTime desde,
+    required DateTime hasta,
+  }) async {
+    final desdeIso = desde.toIso8601String();
+    final hastaIso = hasta.toIso8601String();
+    try {
+      final snapshot = await ventas
+          .where('fecha', isGreaterThanOrEqualTo: desdeIso)
+          .where('fecha', isLessThanOrEqualTo: hastaIso)
+          .orderBy('fecha')
+          .get();
+      return snapshot.docs
+          .map((doc) => {
+                'id': doc.id,
+                ...doc.data(),
+              })
+          .toList();
+    } catch (e) {
+      debugPrint(
+          'Firestore obtenerVentasEnRango (filtro por fecha) falló, filtrando en memoria: $e');
+      final snapshot = await ventas.get();
+      final items = snapshot.docs
+          .map((doc) => {
+                'id': doc.id,
+                ...doc.data(),
+              })
+          .where((data) {
+            final raw = data['fecha'];
+            if (raw == null) return false;
+            final d = DateTime.tryParse(raw.toString());
+            if (d == null) return false;
+            return !d.isBefore(desde) && !d.isAfter(hasta);
+          }).toList();
+
+      items.sort((a, b) {
+        final fa = a['fecha'];
+        final fb = b['fecha'];
+        if (fa == null && fb == null) return 0;
+        if (fa == null) return -1;
+        if (fb == null) return 1;
+        try {
+          final da = DateTime.tryParse(fa.toString());
+          final db = DateTime.tryParse(fb.toString());
+          if (da == null && db == null) return 0;
+          if (da == null) return -1;
+          if (db == null) return 1;
+          return da.compareTo(db);
+        } catch (_) {
+          return 0;
+        }
+      });
+
+      return items;
+    }
+  }
+
+  /// Lee los gastos en el rango [desde, hasta], inclusive.
+  /// Intenta filtrar/ordenar por fecha en la consulta; si no es posible por compatibilidad de datos,
+  /// filtra y ordena en memoria usando el campo 'fecha' (ISO8601 String).
+  Future<List<Map<String, dynamic>>> obtenerGastosEnRango({
+    required DateTime desde,
+    required DateTime hasta,
+  }) async {
+    final desdeIso = desde.toIso8601String();
+    final hastaIso = hasta.toIso8601String();
+    try {
+      final snapshot = await gastos
+          .where('fecha', isGreaterThanOrEqualTo: desdeIso)
+          .where('fecha', isLessThanOrEqualTo: hastaIso)
+          .orderBy('fecha')
+          .get();
+      return snapshot.docs
+          .map((doc) => {
+                'id': doc.id,
+                ...doc.data(),
+              })
+          .toList();
+    } catch (e) {
+      debugPrint(
+          'Firestore obtenerGastosEnRango (filtro por fecha) falló, filtrando en memoria: $e');
+      final snapshot = await gastos.get();
+      final items = snapshot.docs
+          .map((doc) => {
+                'id': doc.id,
+                ...doc.data(),
+              })
+          .where((data) {
+            final raw = data['fecha'];
+            if (raw == null) return false;
+            final d = DateTime.tryParse(raw.toString());
+            if (d == null) return false;
+            return !d.isBefore(desde) && !d.isAfter(hasta);
+          }).toList();
+
+      items.sort((a, b) {
+        final fa = a['fecha'];
+        final fb = b['fecha'];
+        if (fa == null && fb == null) return 0;
+        if (fa == null) return -1;
+        if (fb == null) return 1;
+        try {
+          final da = DateTime.tryParse(fa.toString());
+          final db = DateTime.tryParse(fb.toString());
+          if (da == null && db == null) return 0;
+          if (da == null) return -1;
+          if (db == null) return 1;
+          return da.compareTo(db);
+        } catch (_) {
+          return 0;
+        }
+      });
+
+      return items;
+    }
+  }
 }
