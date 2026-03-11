@@ -15,6 +15,7 @@ import 'flujo/flujo_screen.dart';
 import 'ventas_screen.dart';
 import 'traspaso_screen.dart';
 import 'merma_screen.dart';
+import 'gastos_screen.dart';
 
 class InicioTab extends StatefulWidget {
   final MotorInvernadero motor;
@@ -422,6 +423,27 @@ class _InicioTabState extends State<InicioTab> {
                 },
                 icon: const Icon(Icons.remove_circle_outline),
                 label: const Text('+ Registrar merma'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Botón Registrar Gasto
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => GastosScreen(
+                        firestoreRepo: widget.firestoreRepo,
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.payments),
+                label: const Text('Registrar gasto'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
