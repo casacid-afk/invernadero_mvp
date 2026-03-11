@@ -20,6 +20,9 @@ class InicioTab extends StatefulWidget {
   final MotorInvernadero motor;
   final InvernaderoFirestoreRepo firestoreRepo;
 
+  static final GlobalKey<_InicioTabState> globalKey =
+      GlobalKey<_InicioTabState>();
+
   const InicioTab({super.key, required this.motor, required this.firestoreRepo});
 
   @override
@@ -87,6 +90,10 @@ class _InicioTabState extends State<InicioTab> {
         _coberturas = coberturas;
       });
     }
+  }
+
+  Future<void> refrescarSugerencias() async {
+    await _cargarSugerenciasSiembra();
   }
 
   Future<void> _aplicarSeed() async {
@@ -170,8 +177,15 @@ class _InicioTabState extends State<InicioTab> {
 
           final siembraSugeridaDouble =
               demandaDuranteCiclo + stockSeguridad - stockTotal;
-          final siembraSugerida =
-              siembraSugeridaDouble > 0 ? siembraSugeridaDouble.round() : 0;
+          int siembraSugerida;
+          if (siembraSugeridaDouble <= 0) {
+            siembraSugerida = 0;
+          } else if (cultivoKey == CultivoKeys.lechuga) {
+            final base = siembraSugeridaDouble.round();
+            siembraSugerida = ((base + 699) ~/ 700) * 700;
+          } else {
+            siembraSugerida = siembraSugeridaDouble.round();
+          }
 
           String estado;
           if (coberturaTotalSemanas < semanasCiclo) {

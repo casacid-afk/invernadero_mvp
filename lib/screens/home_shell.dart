@@ -69,7 +69,11 @@ class _HomeShellState extends State<HomeShell> {
       body: IndexedStack(
         index: _selectedIndex,
         children: [
-          InicioTab(motor: widget.motor, firestoreRepo: widget.firestoreRepo),
+          InicioTab(
+            key: InicioTab.globalKey,
+            motor: widget.motor,
+            firestoreRepo: widget.firestoreRepo,
+          ),
           SiembrasListaScreen(motor: widget.motor),
           VentasScreen(motor: widget.motor, firestoreRepo: widget.firestoreRepo),
           StockTabScreen(motor: widget.motor, firestoreRepo: widget.firestoreRepo),
@@ -83,6 +87,9 @@ class _HomeShellState extends State<HomeShell> {
           setState(() {
             _selectedIndex = index;
           });
+          if (index == 0) {
+            InicioTab.globalKey.currentState?.refrescarSugerencias();
+          }
         },
         items: const [
           BottomNavigationBarItem(
