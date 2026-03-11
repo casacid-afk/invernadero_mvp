@@ -28,6 +28,9 @@ class InvernaderoFirestoreRepo {
   CollectionReference<Map<String, dynamic>> get gastos =>
       _envDoc.collection('gastos');
 
+  CollectionReference<Map<String, dynamic>> get clientes =>
+      _envDoc.collection('clientes');
+
   /// Persiste un documento de venta en Firestore. Añade createdAt y origen.
   Future<void> guardarVenta(Map<String, dynamic> data) async {
     final doc = Map<String, dynamic>.from(data)
@@ -50,6 +53,14 @@ class InvernaderoFirestoreRepo {
       ..['createdAt'] = FieldValue.serverTimestamp()
       ..['origen'] = 'mvp';
     await gastos.add(doc);
+  }
+
+  /// Persiste un cliente en Firestore. Añade createdAt y origen.
+  Future<void> guardarCliente(Map<String, dynamic> data) async {
+    final doc = Map<String, dynamic>.from(data)
+      ..['createdAt'] = FieldValue.serverTimestamp()
+      ..['origen'] = 'mvp';
+    await clientes.add(doc);
   }
 
   /// Valor de stock disponible desde el respaldo para un cultivo, o null si no hay.
@@ -273,6 +284,103 @@ class InvernaderoFirestoreRepo {
       });
 
       return items;
+    }
+  }
+
+  /// Obtiene todas las ventas a crédito abiertas (medioPago == 'credito',
+  /// estadoCobro == 'abierta' y clienteId no vacío).
+  Future<List<Map<String, dynamic>>> obtenerVentasCreditoAbiertas() async {
+    try {
+      final snapshot = await ventas
+          .where('medioPago', isEqualTo: 'credito')
+          .where('estadoCobro', isEqualTo: 'abierta')
+          .where('clienteId', isNull: false)
+          .get();
+      return snapshot.docs
+          .map((doc) => {
+                'id': doc.id,
+                ...doc.data(),
+              })
+          .where((data) {
+            final clienteId = data['clienteId'];
+            return clienteId != null &&
+                clienteId.toString().isNotEmpty;
+          }).toList();
+    } catch (e) {
+      debugPrint(
+          'Firestore obtenerVentasCreditoAbiertas (filtros por credito/abierta/clienteId) falló, filtrando en memoria: $e');
+      final snapshot = await ventas.get();
+      final items = snapshot.docs
+          .map((doc) => {
+                'id': doc.id,
+                ...doc.data(),
+              })
+          .where((data) {
+            final medioPago = data['medioPago']?.toString();
+            final estadoCobro = data['estadoCobro']?.toString();
+            final clienteId = data['clienteId'];
+            return medioPago == 'credito' &&
+                estadoCobro == 'abierta' &&
+                clienteId != null &&
+                clienteId.toString().isNotEmpty;
+          }).toList();
+
+      return items;
+    }
+  }
+
+  /// Obtiene todos los clientes, ordenados por nombre ascendente.
+  Future<List<Map<String, dynamic>>> obtenerClientes() async {
+    try {
+      final snapshot = await clientes.orderBy('nombre').get();
+      return snapshot.docs
+          .map((doc) => {
+                'id': doc.id,
+                ...doc.data(),
+              })
+          .toList();
+    } catch (e) {
+      debugPrint(
+          'Firestore obtenerClientes (orderBy nombre) falló, ordenando en memoria: $e');
+      final snapshot = await clientes.get();
+      final items = snapshot.docs
+          .map((doc) => {
+                'id': doc.id,
+                ...doc.data(),
+              })
+          .toList();
+
+      items.sort((a, b) {
+        final na = a['nombre']?.toString() ?? '';
+        final nb = b['nombre']?.toString() ?? '';
+        return na.toLowerCase().compareTo(nb.toLowerCase());
+      });
+
+      return items;
+    }
+  }
+
+  /// Obtiene solo los clientes activos, ordenados por nombre ascendente.
+  Future<List<Map<String, dynamic>>> obtenerClientesActivos() async {
+    try {
+      final snapshot = await clientes
+          .where('activo', isEqualTo: true)
+          .orderBy('nombre')
+          .get();
+      return snapshot.docs
+          .map((doc) => {
+                'id': doc.id,
+                ...doc.data(),
+              })
+          .toList();
+    } catch (e) {
+      debugPrint(
+          'Firestore obtenerClientesActivos (filtro por activo/nombre) falló, filtrando en memoria: $e');
+      final todos = await obtenerClientes();
+      return todos.where((c) {
+        final activo = c['activo'];
+        return activo == true;
+      }).toList();
     }
   }
 }
