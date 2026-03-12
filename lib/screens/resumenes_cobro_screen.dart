@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../data/invernadero_firestore_repo.dart';
+import '../navigation_observer.dart';
 import 'resumen_cobro_detalle_screen.dart';
 
 class ResumenesCobroScreen extends StatefulWidget {
@@ -29,7 +30,8 @@ enum _OrdenResumenCobro {
   clienteAZ,
 }
 
-class _ResumenesCobroScreenState extends State<ResumenesCobroScreen> {
+class _ResumenesCobroScreenState extends State<ResumenesCobroScreen>
+    with RouteAware {
   final DateFormat _formatoFecha =
       DateFormat('dd-MM-yyyy HH:mm', 'es_CL');
 
@@ -47,6 +49,56 @@ class _ResumenesCobroScreenState extends State<ResumenesCobroScreen> {
     _cargar();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final ModalRoute<dynamic>? route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  /// Se llama cuando esta pantalla vuelve a quedar visible porque
+  /// se hizo pop de otra ruta que estaba encima.
+  @override
+  void didPopNext() {
+    _cargar();
+  }
+
+  /// Fecha clave común para ordenar y elegir el resumen activo por cliente.
+  /// Prioriza updatedAt; si no existe o no es parseable, usa createdAt.
+  DateTime? _fechaClaveResumen(Map<String, dynamic> data) {
+    final rawUpdated = data['updatedAt'];
+    final rawCreated = data['createdAt'];
+
+    DateTime? fecha;
+    if (rawUpdated is Timestamp) {
+      fecha = rawUpdated.toDate();
+    } else if (rawUpdated is DateTime) {
+      fecha = rawUpdated;
+    } else if (rawUpdated != null) {
+      fecha = DateTime.tryParse(rawUpdated.toString());
+    }
+    fecha ??= () {
+      if (rawCreated is Timestamp) {
+        return rawCreated.toDate();
+      } else if (rawCreated is DateTime) {
+        return rawCreated;
+      } else if (rawCreated != null) {
+        return DateTime.tryParse(rawCreated.toString());
+      }
+      return null;
+    }();
+
+    return fecha;
+  }
+
   Future<void> _cargar() async {
     setState(() {
       _cargando = true;
@@ -54,9 +106,7 @@ class _ResumenesCobroScreenState extends State<ResumenesCobroScreen> {
     });
 
     try {
-      final snapshot = await widget.firestoreRepo.resumenesCobro
-          .orderBy('createdAt', descending: true)
-          .get();
+      final snapshot = await widget.firestoreRepo.resumenesCobro.get();
       final items = snapshot.docs
           .map((doc) => {
                 'id': doc.id,
@@ -96,7 +146,7 @@ class _ResumenesCobroScreenState extends State<ResumenesCobroScreen> {
       return _items;
     }
 
-    return _items.where((r) {
+    final base = _items.where((r) {
       final estado = r['estado']?.toString();
       final esObsoleto = r['esObsoleto'] == true;
       if (_filtro == _FiltroResumenCobro.pagados) {
@@ -108,6 +158,52 @@ class _ResumenesCobroScreenState extends State<ResumenesCobroScreen> {
       // Pendientes: todo lo que no sea 'pagado' y no esté obsoleto
       return estado != 'pagado' && !esObsoleto;
     }).toList();
+
+    if (_filtro != _FiltroResumenCobro.pendientes) {
+      return base;
+    }
+
+    // Para "Pendientes", elegir un único resumen "abierto" activo por cliente,
+    // usando la misma prioridad que en otras pantallas: updatedAt desc,
+    // luego createdAt desc.
+    final Map<String, Map<String, dynamic>> porCliente = {};
+    final List<Map<String, dynamic>> sinCliente = [];
+
+    for (final r in base) {
+      final clienteId = r['clienteId']?.toString();
+      if (clienteId == null || clienteId.isEmpty) {
+        sinCliente.add(r);
+        continue;
+      }
+
+      final existente = porCliente[clienteId];
+      if (existente == null) {
+        porCliente[clienteId] = r;
+        continue;
+      }
+
+      final fechaNuevo = _fechaClaveResumen(r);
+      final fechaExistente = _fechaClaveResumen(existente);
+
+      if (fechaExistente == null && fechaNuevo == null) {
+        // Si ninguna tiene fecha interpretable, mantener el primero.
+        continue;
+      }
+      if (fechaExistente == null && fechaNuevo != null) {
+        porCliente[clienteId] = r;
+        continue;
+      }
+      if (fechaExistente != null &&
+          fechaNuevo != null &&
+          fechaNuevo.isAfter(fechaExistente)) {
+        porCliente[clienteId] = r;
+      }
+    }
+
+    final resultado = <Map<String, dynamic>>[];
+    resultado.addAll(porCliente.values);
+    resultado.addAll(sinCliente);
+    return resultado;
   }
 
   List<Map<String, dynamic>> get _itemsFiltradosPorPeriodo {
@@ -145,28 +241,22 @@ class _ResumenesCobroScreenState extends State<ResumenesCobroScreen> {
   List<Map<String, dynamic>> get _itemsOrdenados {
     final lista = List<Map<String, dynamic>>.from(_itemsFiltradosYBuscados);
 
-    int _compararFecha(dynamic aCreatedAt, dynamic bCreatedAt) {
-      DateTime? parse(dynamic v) {
-        if (v == null) return null;
-        if (v is Timestamp) return v.toDate();
-        if (v is DateTime) return v;
-        return DateTime.tryParse(v.toString());
-      }
+    int _compararFechaClave(Map<String, dynamic> a, Map<String, dynamic> b) {
+      final aFecha = _fechaClaveResumen(a);
+      final bFecha = _fechaClaveResumen(b);
 
-      final a = parse(aCreatedAt);
-      final b = parse(bCreatedAt);
-      if (a == null && b == null) return 0;
-      if (a == null) return -1;
-      if (b == null) return 1;
-      return a.compareTo(b);
+      if (aFecha == null && bFecha == null) return 0;
+      if (aFecha == null) return -1;
+      if (bFecha == null) return 1;
+      return aFecha.compareTo(bFecha);
     }
 
     lista.sort((a, b) {
       switch (_orden) {
         case _OrdenResumenCobro.masNuevos:
-          return -_compararFecha(a['createdAt'], b['createdAt']);
+          return -_compararFechaClave(a, b);
         case _OrdenResumenCobro.masAntiguos:
-          return _compararFecha(a['createdAt'], b['createdAt']);
+          return _compararFechaClave(a, b);
         case _OrdenResumenCobro.mayorMonto:
           final aRaw = a['totalPendiente'];
           final bRaw = b['totalPendiente'];
@@ -654,8 +744,10 @@ class _ResumenesCobroScreenState extends State<ResumenesCobroScreen> {
                                                 ),
                                               ),
                                               isThreeLine: true,
-                                              onTap: () {
-                                                Navigator.of(context).push(
+                                              onTap: () async {
+                                                final refrescar =
+                                                    await Navigator.of(context)
+                                                        .push(
                                                   MaterialPageRoute(
                                                     builder: (context) =>
                                                         ResumenCobroDetalleScreen(
@@ -666,6 +758,9 @@ class _ResumenesCobroScreenState extends State<ResumenesCobroScreen> {
                                                     ),
                                                   ),
                                                 );
+                                                if (refrescar == true) {
+                                                  _cargar();
+                                                }
                                               },
                                             );
                                           },

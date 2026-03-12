@@ -6,6 +6,7 @@ import 'data/invernadero_firestore_repo.dart';
 import 'domain/motor_invernadero.dart';
 import 'firebase_options.dart';
 import 'screens/home_shell.dart';
+import 'navigation_observer.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,6 +29,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
         useMaterial3: true,
       ),
+      navigatorObservers: [routeObserver],
       home: HomeShell(
         motor: MotorInvernadero(),
         firestoreRepo: InvernaderoFirestoreRepo(),

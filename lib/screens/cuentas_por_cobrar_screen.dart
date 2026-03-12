@@ -100,15 +100,57 @@ class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
               .orderBy('createdAt', descending: true)
               .limit(10)
               .get();
+
+          Map<String, dynamic>? mejor;
+          DateTime? mejorFecha;
+          String? mejorId;
+
           for (final doc in snapshot.docs) {
             final data = doc.data();
             final estado = data['estado']?.toString();
-            if (estado != 'pagado') {
-              resumen.tieneResumenAbierto = true;
-              resumen.resumenAbiertoCreatedAt = data['createdAt'];
-              resumen.resumenAbiertoId = doc.id;
-              break;
+            if (estado == 'pagado') continue;
+
+            final rawUpdated = data['updatedAt'];
+            final rawCreated = data['createdAt'];
+
+            DateTime? fecha;
+            if (rawUpdated is Timestamp) {
+              fecha = rawUpdated.toDate();
+            } else if (rawUpdated is DateTime) {
+              fecha = rawUpdated;
+            } else if (rawUpdated != null) {
+              fecha = DateTime.tryParse(rawUpdated.toString());
             }
+            fecha ??= () {
+              if (rawCreated is Timestamp) {
+                return rawCreated.toDate();
+              } else if (rawCreated is DateTime) {
+                return rawCreated;
+              } else if (rawCreated != null) {
+                return DateTime.tryParse(rawCreated.toString());
+              }
+              return null;
+            }();
+
+            if (fecha == null) {
+              if (mejor == null) {
+                mejor = data;
+                mejorId = doc.id;
+              }
+              continue;
+            }
+
+            if (mejorFecha == null || fecha.isAfter(mejorFecha!)) {
+              mejorFecha = fecha;
+              mejor = data;
+              mejorId = doc.id;
+            }
+          }
+
+          if (mejor != null && mejorId != null) {
+            resumen.tieneResumenAbierto = true;
+            resumen.resumenAbiertoCreatedAt = mejor['createdAt'];
+            resumen.resumenAbiertoId = mejorId;
           }
         } catch (_) {
           // Si falla la lectura de resúmenes, simplemente no marcamos indicador.

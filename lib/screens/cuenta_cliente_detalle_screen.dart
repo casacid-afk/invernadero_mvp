@@ -142,17 +142,56 @@ class _CuentaClienteDetalleScreenState
           .orderBy('createdAt', descending: true)
           .limit(10)
           .get();
+      Map<String, dynamic>? mejor;
+      DateTime? mejorFecha;
+
       for (final doc in snapshot.docs) {
         final data = doc.data();
         final estado = data['estado']?.toString();
-        if (estado != 'pagado') {
-          return {
+        if (estado == 'pagado') continue;
+
+        final rawUpdated = data['updatedAt'];
+        final rawCreated = data['createdAt'];
+
+        DateTime? fecha;
+        if (rawUpdated is Timestamp) {
+          fecha = rawUpdated.toDate();
+        } else if (rawUpdated is DateTime) {
+          fecha = rawUpdated;
+        } else if (rawUpdated != null) {
+          fecha = DateTime.tryParse(rawUpdated.toString());
+        }
+        fecha ??= () {
+          if (rawCreated is Timestamp) {
+            return rawCreated.toDate();
+          } else if (rawCreated is DateTime) {
+            return rawCreated;
+          } else if (rawCreated != null) {
+            return DateTime.tryParse(rawCreated.toString());
+          }
+          return null;
+        }();
+
+        if (fecha == null) {
+          // Si no hay fechas interpretables, tomar el primero que aparezca.
+          if (mejor == null) {
+            mejor = {
+              'id': doc.id,
+              ...data,
+            };
+          }
+          continue;
+        }
+
+        if (mejorFecha == null || fecha.isAfter(mejorFecha!)) {
+          mejorFecha = fecha;
+          mejor = {
             'id': doc.id,
             ...data,
           };
         }
       }
-      return null;
+      return mejor;
     } catch (_) {
       return null;
     }
@@ -486,6 +525,7 @@ class _CuentaClienteDetalleScreenState
                                       final resumenAbierto =
                                           await _obtenerResumenAbiertoMasReciente();
                                       if (resumenAbierto != null) {
+                                        final resumenMap = resumenAbierto;
                                         final decision =
                                             await showDialog<String>(
                                           context: context,
@@ -522,7 +562,7 @@ class _CuentaClienteDetalleScreenState
                                                       Navigator.of(context)
                                                           .pop('crear'),
                                                   child: const Text(
-                                                      'Crear de todos modos'),
+                                                      'Guardar de todos modos'),
                                                 ),
                                               ],
                                             );
@@ -530,7 +570,7 @@ class _CuentaClienteDetalleScreenState
                                         );
 
                                         if (decision == 'ver') {
-                                          final id = resumenAbierto['id']
+                                          final id = resumenMap['id']
                                                   ?.toString() ??
                                               '';
                                           if (id.isNotEmpty && mounted) {
@@ -548,15 +588,9 @@ class _CuentaClienteDetalleScreenState
                                           return;
                                         } else if (decision == 'actualizar') {
                                           final tipoPeriodoSeleccionado =
-                                              await _pedirTipoPeriodo(
-                                            valorActual: resumenAbierto[
-                                                    'tipoPeriodo']
-                                                ?.toString(),
-                                          );
-                                          if (tipoPeriodoSeleccionado == null) {
-                                            return;
-                                          }
-
+                                              resumenMap['tipoPeriodo']
+                                                      ?.toString() ??
+                                                  'manual';
                                           final texto =
                                               _generarTextoResumen();
 
@@ -606,8 +640,7 @@ class _CuentaClienteDetalleScreenState
 
                                           try {
                                             final idResumen =
-                                                resumenAbierto['id']
-                                                        ?.toString() ??
+                                                resumenMap['id']?.toString() ??
                                                     '';
                                             if (idResumen.isEmpty) return;
                                             await widget.firestoreRepo
@@ -651,12 +684,7 @@ class _CuentaClienteDetalleScreenState
                                         // Si decision == 'crear', continúa flujo normal.
                                       }
 
-                                      final tipoPeriodoNuevo =
-                                          await _pedirTipoPeriodo(
-                                              valorActual: 'manual');
-                                      if (tipoPeriodoNuevo == null) {
-                                        return;
-                                      }
+                                      const tipoPeriodoNuevo = 'manual';
 
                                       final texto = _generarTextoResumen();
 
@@ -683,7 +711,7 @@ class _CuentaClienteDetalleScreenState
                                         }
                                       }
 
-                                      final data = <String, dynamic>{
+                                      final updateCrear = <String, dynamic>{
                                         'clienteId': widget.clienteId,
                                         'clienteNombre':
                                             widget.clienteNombre,
@@ -693,19 +721,22 @@ class _CuentaClienteDetalleScreenState
                                         'estado': 'borrador',
                                         'ventaIds': ids,
                                         'tipoPeriodo': tipoPeriodoNuevo,
+                                        'updatedAt':
+                                            FieldValue.serverTimestamp(),
                                       };
                                       if (desde != null) {
-                                        data['periodoDesde'] =
+                                        updateCrear['periodoDesde'] =
                                             desde!.toIso8601String();
                                       }
                                       if (hasta != null) {
-                                        data['periodoHasta'] =
+                                        updateCrear['periodoHasta'] =
                                             hasta!.toIso8601String();
                                       }
 
                                       try {
                                         await widget.firestoreRepo
-                                            .guardarResumenCobro(data);
+                                            .resumenesCobro
+                                            .add(updateCrear);
                                         if (!mounted) return;
                                         ScaffoldMessenger.of(context)
                                             .showSnackBar(

@@ -73,7 +73,7 @@ class _MovimientosTabScreenState extends State<MovimientosTabScreen> {
               Icon(Icons.error_outline, size: 48, color: Colors.red[700]),
               const SizedBox(height: 16),
               Text(
-                'Error al cargar movimientos',
+                'Error al cargar movimientos de stock',
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
               ),
@@ -96,7 +96,7 @@ class _MovimientosTabScreenState extends State<MovimientosTabScreen> {
     if (_items!.isEmpty) {
       return Center(
         child: Text(
-          'No hay movimientos aún',
+          'No hay movimientos de stock aún',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
         ),
       );

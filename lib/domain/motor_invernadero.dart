@@ -666,7 +666,24 @@ class MotorInvernadero {
     _movimientos.clear();
     _contadorId = 0;
 
-    for (final mov in movimientosFirestore) {
+    // Asegurar orden cronológico ascendente por fecha al rehidratar,
+    // independiente de cómo vengan los movimientos desde Firestore.
+    final items = List<Map<String, dynamic>>.from(movimientosFirestore);
+    items.sort((a, b) {
+      final fa = a['fecha'];
+      final fb = b['fecha'];
+      if (fa == null && fb == null) return 0;
+      if (fa == null) return -1;
+      if (fb == null) return 1;
+      final da = DateTime.tryParse(fa.toString());
+      final db = DateTime.tryParse(fb.toString());
+      if (da == null && db == null) return 0;
+      if (da == null) return -1;
+      if (db == null) return 1;
+      return da.compareTo(db);
+    });
+
+    for (final mov in items) {
       final tipo = mov['tipo'];
       final fechaRaw = mov['fecha'];
       final fecha = fechaRaw is String ? DateTime.tryParse(fechaRaw) : null;
@@ -724,10 +741,134 @@ class MotorInvernadero {
         } catch (_) {
           // Ignorar movimientos inválidos durante la rehidratación
         }
+      } else if (tipo == 'traspaso') {
+        // Rehidratar traspasos para que el stock vendible (bancada_final)
+        // sea consistente después de reabrir la app.
+        final cultivoKey = mov['cultivoKey'] as String?;
+        final cantidadRaw = mov['cantidad'];
+        final cantidad = cantidadRaw is num ? cantidadRaw.toInt() : null;
+        final etapaOrigenRaw = mov['etapaOrigen'];
+        final etapaDestinoRaw = mov['etapaDestino'];
+
+        if (cultivoKey == null || cantidad == null || cantidad <= 0) {
+          continue;
+        }
+
+        Etapa? etapaOrigen;
+        if (etapaOrigenRaw is String) {
+          try {
+            etapaOrigen = Etapa.values.firstWhere(
+              (e) => e.name == etapaOrigenRaw,
+            );
+          } catch (_) {
+            etapaOrigen = null;
+          }
+        }
+
+        Etapa? etapaDestino;
+        if (etapaDestinoRaw is String) {
+          try {
+            etapaDestino = Etapa.values.firstWhere(
+              (e) => e.name == etapaDestinoRaw,
+            );
+          } catch (_) {
+            etapaDestino = null;
+          }
+        }
+
+        if (etapaDestino == null) {
+          continue;
+        }
+
+        try {
+          _aplicarTraspasoRehidratacion(
+            cultivoKey: cultivoKey,
+            cantidad: cantidad,
+            etapaOrigen: etapaOrigen,
+            etapaDestino: etapaDestino,
+            fecha: fechaEfectiva,
+          );
+        } catch (_) {
+          // Ignorar movimientos inválidos durante la rehidratación
+        }
       } else {
-        // Tipos de movimiento aún no soportados en rehidratación (traspaso, cosecha, corte, merma).
+        // Tipos de movimiento aún no soportados en rehidratación (cosecha, corte, merma, etc.).
         continue;
       }
+    }
+  }
+
+  /// Aplica un traspaso sintético durante la rehidratación de movimientos,
+  /// sin depender de los ids originales de los lotes en Firestore.
+  void _aplicarTraspasoRehidratacion({
+    required String cultivoKey,
+    required int cantidad,
+    Etapa? etapaOrigen,
+    required Etapa etapaDestino,
+    required DateTime fecha,
+  }) {
+    // Seleccionar lotes origen candidatos para el cultivo, opcionalmente
+    // filtrando por etapaOrigen si viene informada.
+    final lotesOrigen = _lotes
+        .where(
+          (lote) =>
+              lote.activo &&
+              lote.cultivoKey == cultivoKey &&
+              (etapaOrigen == null || lote.etapaActual == etapaOrigen),
+        )
+        .toList()
+      ..sort((a, b) => a.fechaInicioEtapa.compareTo(b.fechaInicioEtapa));
+
+    if (lotesOrigen.isEmpty) {
+      // Si no hay lotes en la etapa declarada, no podemos aplicar el traspaso.
+      return;
+    }
+
+    var restante = cantidad;
+
+    for (final lote in lotesOrigen) {
+      if (restante <= 0) break;
+
+      final loteIndex = _lotes.indexWhere((l) => l.id == lote.id);
+      if (loteIndex == -1) continue;
+
+      final loteActual = _lotes[loteIndex];
+      if (!loteActual.activo || loteActual.cantidadActual <= 0) continue;
+
+      final aMover =
+          restante < loteActual.cantidadActual ? restante : loteActual.cantidadActual;
+
+      if (aMover <= 0) continue;
+
+      // Actualizar lote origen
+      final nuevaCantidadOrigen = loteActual.cantidadActual - aMover;
+      final origenActualizado = Lote(
+        id: loteActual.id,
+        cultivoKey: loteActual.cultivoKey,
+        cantidadActual: nuevaCantidadOrigen,
+        etapaActual: loteActual.etapaActual,
+        fechaInicioEtapa: loteActual.fechaInicioEtapa,
+        fechaSiembra: loteActual.fechaSiembra,
+        activo: nuevaCantidadOrigen > 0,
+        cortesRealizados: loteActual.cortesRealizados,
+      );
+      _lotes[loteIndex] = origenActualizado;
+
+      // Crear sublote en etapa destino
+      final subloteId = _generarIdLote();
+      final sublote = Lote(
+        id: subloteId,
+        cultivoKey: loteActual.cultivoKey,
+        cantidadActual: aMover,
+        etapaActual: etapaDestino,
+        fechaInicioEtapa: fecha,
+        fechaSiembra: loteActual.fechaSiembra,
+        activo: true,
+        cortesRealizados: 0,
+      );
+      _lotes.add(sublote);
+
+      restante -= aMover;
     }
   }
 
