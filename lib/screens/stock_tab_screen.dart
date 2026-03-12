@@ -12,6 +12,9 @@ class StockTabScreen extends StatefulWidget {
   final MotorInvernadero motor;
   final InvernaderoFirestoreRepo firestoreRepo;
 
+  static final GlobalKey<_StockTabScreenState> globalKey =
+      GlobalKey<_StockTabScreenState>();
+
   const StockTabScreen({super.key, required this.motor, required this.firestoreRepo});
 
   @override
@@ -31,6 +34,10 @@ class _StockTabScreenState extends State<StockTabScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _cargarCoberturas();
+  }
+
+  Future<void> refrescarCoberturas() async {
+    await _cargarCoberturas();
   }
 
   Future<void> _cargarCoberturas() async {

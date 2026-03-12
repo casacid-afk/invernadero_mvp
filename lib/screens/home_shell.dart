@@ -76,7 +76,11 @@ class _HomeShellState extends State<HomeShell> {
           ),
           SiembrasListaScreen(motor: widget.motor),
           VentasScreen(motor: widget.motor, firestoreRepo: widget.firestoreRepo),
-          StockTabScreen(motor: widget.motor, firestoreRepo: widget.firestoreRepo),
+          StockTabScreen(
+            key: StockTabScreen.globalKey,
+            motor: widget.motor,
+            firestoreRepo: widget.firestoreRepo,
+          ),
           MovimientosTabScreen(firestoreRepo: widget.firestoreRepo),
         ],
       ),
@@ -89,6 +93,8 @@ class _HomeShellState extends State<HomeShell> {
           });
           if (index == 0) {
             InicioTab.globalKey.currentState?.refrescarSugerencias();
+          } else if (index == 3) {
+            StockTabScreen.globalKey.currentState?.refrescarCoberturas();
           }
         },
         items: const [
