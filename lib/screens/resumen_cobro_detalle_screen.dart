@@ -210,11 +210,21 @@ class _ResumenCobroDetalleScreenState
     if (resultado != true) return;
 
     try {
-      await widget.firestoreRepo.marcarResumenCobroComoPagado(
+      final ok = await widget.firestoreRepo.marcarResumenCobroComoPagado(
         widget.resumenId,
         medioPago: medioPago,
         observacionPago: observacion,
       );
+      if (!ok) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'No se encontró el resumen de cobro para marcar como pagado'),
+          ),
+        );
+        return;
+      }
       await _cargar();
       if (!mounted) return;
       _huboCambios = true;

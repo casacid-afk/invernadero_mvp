@@ -293,11 +293,11 @@ class _CuentaClienteDetalleScreenState
 
     try {
       await widget.firestoreRepo
-          .marcarVentasClienteComoPagadas(widget.clienteId);
+          .marcarVentasYResumenActivoClienteComoPagados(widget.clienteId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Cuenta marcada como pagada'),
+          content: Text('Cuenta y resumen marcados como pagados'),
         ),
       );
       Navigator.of(context).pop(true);

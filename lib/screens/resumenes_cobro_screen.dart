@@ -39,7 +39,7 @@ class _ResumenesCobroScreenState extends State<ResumenesCobroScreen>
   String? _error;
   List<Map<String, dynamic>> _items = [];
   _FiltroResumenCobro _filtro = _FiltroResumenCobro.pendientes;
-  String _query = '';
+  String _busquedaCliente = '';
   _FiltroPeriodoResumen _filtroPeriodo = _FiltroPeriodoResumen.todos;
   _OrdenResumenCobro _orden = _OrdenResumenCobro.masNuevos;
 
@@ -99,6 +99,26 @@ class _ResumenesCobroScreenState extends State<ResumenesCobroScreen>
     return fecha;
   }
 
+  /// Estado lógico unificado del resumen para filtros/UI.
+  /// Prioriza:
+  /// - 'pagado' si estado == 'pagado' o pagadoAt/fechaPago no son nulos
+  /// - 'obsoleto' si estado == 'obsoleto' o esObsoleto == true
+  /// - en otros casos usa el estado original o 'pendiente' por defecto.
+  String _estadoUi(Map<String, dynamic> r) {
+    final rawEstado = r['estado']?.toString();
+    final pagadoAt = r['pagadoAt'];
+    final fechaPago = r['fechaPago'];
+    final esObsoleto = r['esObsoleto'] == true;
+
+    if (rawEstado == 'pagado' || pagadoAt != null || fechaPago != null) {
+      return 'pagado';
+    }
+    if (rawEstado == 'obsoleto' || esObsoleto) {
+      return 'obsoleto';
+    }
+    return rawEstado ?? 'pendiente';
+  }
+
   Future<void> _cargar() async {
     setState(() {
       _cargando = true;
@@ -113,6 +133,13 @@ class _ResumenesCobroScreenState extends State<ResumenesCobroScreen>
                 ...doc.data(),
               })
           .toList();
+
+      // TODO(TEMP): remover estos debugPrint cuando se confirme el flujo de estados.
+      for (final r in items) {
+        debugPrint(
+            '[TEMP ResumenCobro] id=${r['id']} cliente=${r['clienteNombre'] ?? r['nombreCliente']} '
+            'estado=${r['estado']} pagadoAt=${r['pagadoAt']} fechaPago=${r['fechaPago']} esObsoleto=${r['esObsoleto']}');
+      }
 
       // Clasificar resúmenes obsoletos: no pagados cuyas ventas ya no están abiertas
       final obsoletosIds =
@@ -147,16 +174,15 @@ class _ResumenesCobroScreenState extends State<ResumenesCobroScreen>
     }
 
     final base = _items.where((r) {
-      final estado = r['estado']?.toString();
-      final esObsoleto = r['esObsoleto'] == true;
+      final estado = _estadoUi(r);
       if (_filtro == _FiltroResumenCobro.pagados) {
         return estado == 'pagado';
       }
       if (_filtro == _FiltroResumenCobro.obsoletos) {
-        return esObsoleto;
+        return estado == 'obsoleto';
       }
-      // Pendientes: todo lo que no sea 'pagado' y no esté obsoleto
-      return estado != 'pagado' && !esObsoleto;
+      // Pendientes: todo lo que no sea 'pagado' ni 'obsoleto'
+      return estado != 'pagado' && estado != 'obsoleto';
     }).toList();
 
     if (_filtro != _FiltroResumenCobro.pendientes) {
@@ -229,12 +255,15 @@ class _ResumenesCobroScreenState extends State<ResumenesCobroScreen>
 
   List<Map<String, dynamic>> get _itemsFiltradosYBuscados {
     final base = _itemsFiltradosPorPeriodo;
-    final q = _query.trim().toLowerCase();
+    final q = _busquedaCliente.trim().toLowerCase();
     if (q.isEmpty) return base;
 
     return base.where((r) {
-      final nombre = r['clienteNombre']?.toString().toLowerCase().trim() ?? '';
-      return nombre.contains(q);
+      final nombre1 =
+          r['clienteNombre']?.toString().toLowerCase().trim() ?? '';
+      final nombre2 =
+          r['nombreCliente']?.toString().toLowerCase().trim() ?? '';
+      return nombre1.contains(q) || nombre2.contains(q);
     }).toList();
   }
 
@@ -326,7 +355,7 @@ class _ResumenesCobroScreenState extends State<ResumenesCobroScreen>
     buffer.writeln();
     buffer.writeln('Filtro estado: ${_descripcionFiltroEstado()}');
     buffer.writeln('Filtro período: ${_descripcionFiltroPeriodo()}');
-    final q = _query.trim();
+    final q = _busquedaCliente.trim();
     if (q.isNotEmpty) {
       buffer.writeln('Búsqueda: "$q"');
     }
@@ -344,12 +373,11 @@ class _ResumenesCobroScreenState extends State<ResumenesCobroScreen>
               : 'Cliente';
       final totalRaw = r['totalPendiente'];
       final total = (totalRaw is num) ? totalRaw.toDouble() : 0.0;
-      final estado = r['estado']?.toString() ?? 'borrador';
-      final esObsoleto = r['esObsoleto'] == true;
+      final estado = _estadoUi(r);
       final tipoPeriodo = r['tipoPeriodo']?.toString();
 
       final estadoLabel =
-          esObsoleto ? 'obsoleto (sin deuda)' : estado;
+          estado == 'obsoleto' ? 'obsoleto (sin deuda)' : estado;
 
       buffer.write('- $cliente: ');
       buffer.write(
@@ -564,7 +592,7 @@ class _ResumenesCobroScreenState extends State<ResumenesCobroScreen>
       ),
       onChanged: (value) {
         setState(() {
-          _query = value;
+          _busquedaCliente = value.trim().toLowerCase();
         });
       },
     );
@@ -674,7 +702,7 @@ class _ResumenesCobroScreenState extends State<ResumenesCobroScreen>
                                 : _itemsFiltradosYBuscados.isEmpty
                                     ? const Center(
                                         child: Text(
-                                            'No hay resúmenes para esa búsqueda'),
+                                            'No hay clientes que coincidan con la búsqueda'),
                                       )
                                     : RefreshIndicator(
                                         onRefresh: _cargar,
@@ -696,11 +724,7 @@ class _ResumenesCobroScreenState extends State<ResumenesCobroScreen>
                                             final total = (totalRaw is num)
                                                 ? totalRaw.toDouble()
                                                 : 0.0;
-                                            final estado =
-                                                r['estado']?.toString() ??
-                                                    'borrador';
-                                            final esObsoleto =
-                                                r['esObsoleto'] == true;
+                                            final estado = _estadoUi(r);
                                             final cantidadEntregasRaw =
                                                 r['cantidadEntregas'];
                                             final int? cantidadEntregas =
@@ -717,7 +741,7 @@ class _ResumenesCobroScreenState extends State<ResumenesCobroScreen>
                                               lineas.add(
                                                   'Entregas incluidas: $cantidadEntregas');
                                             }
-                                            if (esObsoleto) {
+                                            if (estado == 'obsoleto') {
                                               lineas.add(
                                                   'Estado: obsoleto (sin deuda)');
                                             } else {

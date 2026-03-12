@@ -78,7 +78,9 @@ class InvernaderoFirestoreRepo {
   /// marca también esas ventas como pagadas para mantener consistencia con cuentas por cobrar.
   ///
   /// - No modifica resúmenes legacy sin ventaIds (en ese caso solo se actualiza el propio resumen).
-  Future<void> marcarResumenCobroComoPagado(
+  ///
+  /// Devuelve true si el resumen existía y fue actualizado, false si no se encontró.
+  Future<bool> marcarResumenCobroComoPagado(
     String resumenId, {
     required String medioPago,
     String? observacionPago,
@@ -86,7 +88,7 @@ class InvernaderoFirestoreRepo {
     try {
       final snapshot = await resumenesCobro.doc(resumenId).get();
       if (!snapshot.exists || snapshot.data() == null) {
-        return;
+        return false;
       }
       final data = snapshot.data()!;
       final dynamic ventaIdsRaw = data['ventaIds'];
@@ -107,6 +109,7 @@ class InvernaderoFirestoreRepo {
       final resumenRef = resumenesCobro.doc(resumenId);
       batch.update(resumenRef, {
         'estado': 'pagado',
+        'pagadoAt': FieldValue.serverTimestamp(),
         'fechaPago': FieldValue.serverTimestamp(),
         'medioPago': medioPago,
         if (obs != null && obs.isNotEmpty) 'observacionPago': obs,
@@ -124,6 +127,7 @@ class InvernaderoFirestoreRepo {
       }
 
       await batch.commit();
+      return true;
     } catch (e) {
       debugPrint('Firestore marcarResumenCobroComoPagado: $e');
       rethrow;
@@ -454,6 +458,90 @@ class InvernaderoFirestoreRepo {
     } catch (e) {
       debugPrint('Firestore marcarVentasClienteComoPagadas: $e');
       rethrow;
+    }
+  }
+
+  /// Marca las ventas a crédito abiertas de un cliente como pagadas y,
+  /// si existe, marca también como pagado el resumen de cobro "activo"
+  /// más reciente de ese cliente.
+  Future<void> marcarVentasYResumenActivoClienteComoPagados(
+      String clienteId) async {
+    // Primero, marcar ventas a crédito abiertas como pagadas (como hoy).
+    await marcarVentasClienteComoPagadas(clienteId);
+
+    try {
+      // Buscar resúmenes del cliente (no pagados) y elegir el más reciente
+      // priorizando updatedAt y luego createdAt.
+      final snapshot = await resumenesCobro
+          .where('clienteId', isEqualTo: clienteId)
+          .get();
+
+      Map<String, dynamic>? mejorData;
+      String? mejorId;
+      DateTime? mejorFecha;
+
+      DateTime? _extraerFecha(Map<String, dynamic> data) {
+        final rawUpdated = data['updatedAt'];
+        final rawCreated = data['createdAt'];
+
+        DateTime? fecha;
+        if (rawUpdated is Timestamp) {
+          fecha = rawUpdated.toDate();
+        } else if (rawUpdated is DateTime) {
+          fecha = rawUpdated;
+        } else if (rawUpdated != null) {
+          fecha = DateTime.tryParse(rawUpdated.toString());
+        }
+        fecha ??= () {
+          if (rawCreated is Timestamp) {
+            return rawCreated.toDate();
+          } else if (rawCreated is DateTime) {
+            return rawCreated;
+          } else if (rawCreated != null) {
+            return DateTime.tryParse(rawCreated.toString());
+          }
+          return null;
+        }();
+
+        return fecha;
+      }
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final estado = data['estado']?.toString();
+        if (estado == 'pagado' || estado == 'obsoleto') {
+          continue;
+        }
+
+        final fecha = _extraerFecha(data);
+        if (fecha == null) {
+          if (mejorData == null) {
+            mejorData = data;
+            mejorId = doc.id;
+          }
+          continue;
+        }
+
+        if (mejorFecha == null || fecha.isAfter(mejorFecha!)) {
+          mejorFecha = fecha;
+          mejorData = data;
+          mejorId = doc.id;
+        }
+      }
+
+      if (mejorId == null) {
+        return;
+      }
+
+      await resumenesCobro.doc(mejorId).update({
+        'estado': 'pagado',
+        'pagadoAt': FieldValue.serverTimestamp(),
+        'fechaPago': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint(
+          'Firestore marcarVentasYResumenActivoClienteComoPagados: $e');
+      // No relanzar: las ventas ya fueron marcadas como pagadas; el resumen es best-effort.
     }
   }
 
