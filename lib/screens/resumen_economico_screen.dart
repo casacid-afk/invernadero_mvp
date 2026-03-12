@@ -84,9 +84,10 @@ class _ResumenEconomicoScreenState extends State<ResumenEconomicoScreen> {
 
       DateTime? _parseFecha(dynamic fechaRaw) {
         if (fechaRaw == null) return null;
-        if (fechaRaw is Timestamp) return fechaRaw.toDate();
-        if (fechaRaw is DateTime) return fechaRaw;
-        return DateTime.tryParse(fechaRaw.toString());
+        if (fechaRaw is Timestamp) return fechaRaw.toDate().toLocal();
+        if (fechaRaw is DateTime) return fechaRaw.toLocal();
+        final parsed = DateTime.tryParse(fechaRaw.toString());
+        return parsed?.toLocal();
       }
 
       bool _estaEnPeriodo(DateTime? fecha) {
@@ -153,11 +154,20 @@ class _ResumenEconomicoScreenState extends State<ResumenEconomicoScreen> {
       double gastosTotal = 0;
       final List<Map<String, dynamic>> gastosFiltrados = [];
       for (final g in gastosRaw) {
-        final fecha = _parseFecha(g['fecha']);
+        DateTime? fecha = _parseFecha(g['fecha']);
         if (fecha != null) {
           anios.add(fecha.year);
         }
-        if (!_estaEnPeriodo(fecha)) continue;
+        // Si la fecha del gasto no cae en el período seleccionado,
+        // intentar usar createdAt como fecha económica de respaldo.
+        if (!_estaEnPeriodo(fecha)) {
+          final fallback = _parseFecha(g['createdAt']);
+          if (!_estaEnPeriodo(fallback)) continue;
+          fecha = fallback;
+          if (fecha != null) {
+            anios.add(fecha.year);
+          }
+        }
         gastosFiltrados.add(g);
 
         final montoRaw = g['monto'];
@@ -233,8 +243,12 @@ class _ResumenEconomicoScreenState extends State<ResumenEconomicoScreen> {
           }
         }
         for (final g in gastosRaw) {
-          final fecha = _parseFecha(g['fecha']);
-          if (!estaEnPeriodoAnterior(fecha)) continue;
+          DateTime? fecha = _parseFecha(g['fecha']);
+          if (!estaEnPeriodoAnterior(fecha)) {
+            final fallback = _parseFecha(g['createdAt']);
+            if (!estaEnPeriodoAnterior(fallback)) continue;
+            fecha = fallback;
+          }
           final montoRaw = g['monto'];
           final monto = (montoRaw is num) ? montoRaw.toDouble() : 0.0;
           gastosAnterior += monto;
