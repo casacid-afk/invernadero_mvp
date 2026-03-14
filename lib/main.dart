@@ -7,6 +7,7 @@ import 'domain/motor_invernadero.dart';
 import 'firebase_options.dart';
 import 'screens/home_shell.dart';
 import 'navigation_observer.dart';
+import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,10 +26,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Invernadero MVP',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-        useMaterial3: true,
-      ),
+      theme: buildAppTheme(),
       navigatorObservers: [routeObserver],
       home: HomeShell(
         motor: MotorInvernadero(),

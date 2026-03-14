@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
+import '../widgets/pastel_section_card.dart';
 import '../data/invernadero_firestore_repo.dart';
 import '../domain/motor_invernadero.dart';
 import '../domain/lote.dart';
@@ -212,12 +214,14 @@ class _TraspasoScreenState extends State<TraspasoScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Selector de lote
+        child: PastelSectionCard(
+          pastel: AppPastel.stock,
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Selector de lote
               DropdownButtonFormField<String>(
                 value: _loteSeleccionado,
                 decoration: const InputDecoration(
@@ -248,37 +252,39 @@ class _TraspasoScreenState extends State<TraspasoScreen> {
 
               // Información del lote seleccionado
               if (loteSeleccionado != null)
-                Card(
-                  color: Theme.of(context).colorScheme.surfaceVariant,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Lote seleccionado',
-                          style: Theme.of(context).textTheme.titleSmall,
+                PastelSectionCard(
+                  pastel: AppPastel.stock,
+                  title: 'Lote seleccionado',
+                  icon: Icons.inventory_2,
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Cultivo: ${CultivoLabels.obtenerLabel(loteSeleccionado.cultivoKey)}',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textPrimary,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Cultivo: ${CultivoLabels.obtenerLabel(loteSeleccionado.cultivoKey)}',
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Etapa actual: ${_formatearEtapa(loteSeleccionado.etapaActual)}',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textPrimary,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Etapa actual: ${_formatearEtapa(loteSeleccionado.etapaActual)}',
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Cantidad disponible: ${loteSeleccionado.cantidadActual} unidades',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: loteSeleccionado.cantidadActual > 0
+                              ? AppPastel.stock.accent
+                              : Colors.red,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Cantidad disponible: ${loteSeleccionado.cantidadActual} unidades',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: loteSeleccionado.cantidadActual > 0
-                                ? Theme.of(context).colorScheme.primary
-                                : Colors.red,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               if (loteSeleccionado != null) const SizedBox(height: 16),
@@ -359,6 +365,7 @@ class _TraspasoScreenState extends State<TraspasoScreen> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

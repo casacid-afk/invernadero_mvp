@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../data/invernadero_firestore_repo.dart';
 import '../domain/motor_invernadero.dart';
 import '../domain/etapa.dart';
@@ -72,14 +73,21 @@ class _StockTabScreenState extends State<StockTabScreen> {
         .join(' ');
   }
 
-  /// Widget helper para crear módulos con header consistente
+  /// Widget helper para crear módulos con header consistente (pastel stock)
   Widget _buildModuleCard({
     required BuildContext context,
     required String title,
     required IconData icon,
     required Widget child,
   }) {
+    const pastel = AppPastel.stock;
     return Card(
+      color: pastel.background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: pastel.border, width: 1),
+      ),
+      elevation: 0,
       child: Padding(
         padding: const EdgeInsets.all(14.0),
         child: Column(
@@ -87,16 +95,13 @@ class _StockTabScreenState extends State<StockTabScreen> {
           children: [
             Row(
               children: [
-                Icon(
-                  icon,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 26,
-                ),
+                Icon(icon, color: pastel.accent, size: 26),
                 const SizedBox(width: 10),
                 Text(
                   title,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
                   ),
                 ),
               ],

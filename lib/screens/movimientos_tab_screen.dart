@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../data/invernadero_firestore_repo.dart';
 
 class MovimientosTabScreen extends StatefulWidget {
@@ -64,44 +65,55 @@ class _MovimientosTabScreenState extends State<MovimientosTabScreen> {
 
   Widget _buildBody() {
     if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, size: 48, color: Colors.red[700]),
-              const SizedBox(height: 16),
-              Text(
-                'Error al cargar movimientos de stock',
-                style: Theme.of(context).textTheme.titleMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _error!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
-                textAlign: TextAlign.center,
-                maxLines: 5,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+      return Container(
+        color: AppPastel.stock.background,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 48, color: Colors.red[700]),
+                const SizedBox(height: 16),
+                Text(
+                  'Error al cargar movimientos de stock',
+                  style: Theme.of(context).textTheme.titleMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _error!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
+                  textAlign: TextAlign.center,
+                  maxLines: 5,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ),
       );
     }
     if (_items == null) {
-      return const Center(child: CircularProgressIndicator());
+      return Container(
+        color: AppPastel.stock.background,
+        child: const Center(child: CircularProgressIndicator()),
+      );
     }
     if (_items!.isEmpty) {
-      return Center(
-        child: Text(
-          'No hay movimientos de stock aún',
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
+      return Container(
+        color: AppPastel.stock.background,
+        child: Center(
+          child: Text(
+            'No hay movimientos de stock aún',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
+          ),
         ),
       );
     }
-    return ListView.builder(
+    return Container(
+      color: AppPastel.stock.background,
+      child: ListView.builder(
       padding: const EdgeInsets.all(16.0),
       itemCount: _items!.length,
       itemBuilder: (context, index) {
@@ -141,6 +153,7 @@ class _MovimientosTabScreenState extends State<MovimientosTabScreen> {
           ),
         );
       },
+      ),
     );
   }
 }

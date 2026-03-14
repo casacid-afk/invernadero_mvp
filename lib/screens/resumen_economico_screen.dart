@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../theme/app_theme.dart';
 import '../data/invernadero_firestore_repo.dart';
 
 enum _PeriodoResumen {
@@ -412,6 +413,12 @@ class _ResumenEconomicoScreenState extends State<ResumenEconomicoScreen> {
     final double diferencia = monto - (montoAnterior ?? 0);
 
     return Card(
+      color: AppPastel.ventas.background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: AppPastel.ventas.border, width: 1),
+      ),
+      elevation: 0,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -421,6 +428,7 @@ class _ResumenEconomicoScreenState extends State<ResumenEconomicoScreen> {
               titulo,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
                   ),
             ),
             const SizedBox(height: 8),
@@ -474,6 +482,12 @@ class _ResumenEconomicoScreenState extends State<ResumenEconomicoScreen> {
     }
 
     return Card(
+      color: AppPastel.ventas.background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: AppPastel.ventas.border, width: 1),
+      ),
+      elevation: 0,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -550,6 +564,12 @@ class _ResumenEconomicoScreenState extends State<ResumenEconomicoScreen> {
     }
 
     return Card(
+      color: AppPastel.ventas.background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: AppPastel.ventas.border, width: 1),
+      ),
+      elevation: 0,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

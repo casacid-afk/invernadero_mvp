@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../theme/app_theme.dart';
 import '../data/invernadero_firestore_repo.dart';
 import '../navigation_observer.dart';
 import 'resumen_cobro_detalle_screen.dart';
@@ -605,9 +606,11 @@ class _ResumenesCobroScreenState extends State<ResumenesCobroScreen>
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('Resúmenes de cobro'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: _cargando
+      body: Container(
+        color: AppPastel.ventas.background,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: _cargando
             ? const Center(child: CircularProgressIndicator())
             : _error != null
                 ? Center(
@@ -793,6 +796,7 @@ class _ResumenesCobroScreenState extends State<ResumenesCobroScreen>
                           ),
                         ],
                       ),
+        ),
       ),
     );
   }

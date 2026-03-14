@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../theme/app_theme.dart';
 import '../data/invernadero_firestore_repo.dart';
 import 'cuenta_cliente_detalle_screen.dart';
 import 'resumen_cobro_detalle_screen.dart';
@@ -190,9 +191,11 @@ class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('Cuentas por cobrar'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: _cargando
+      body: Container(
+        color: AppPastel.ventas.background,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: _cargando
             ? const Center(child: CircularProgressIndicator())
             : _error != null
                 ? Center(
@@ -278,6 +281,7 @@ class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
                           );
                         },
                       ),
+        ),
       ),
     );
   }

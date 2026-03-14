@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+import '../widgets/pastel_section_card.dart';
 import '../data/invernadero_firestore_repo.dart';
 import '../domain/movimiento.dart';
 
@@ -139,12 +141,14 @@ class _GastosScreenState extends State<GastosScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Fecha
+        child: PastelSectionCard(
+          pastel: AppPastel.ventas,
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Fecha
               Text('Fecha', style: Theme.of(context).textTheme.labelLarge),
               const SizedBox(height: 8),
               InkWell(
@@ -272,6 +276,7 @@ class _GastosScreenState extends State<GastosScreen> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

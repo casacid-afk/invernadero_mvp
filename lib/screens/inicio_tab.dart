@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../data/invernadero_firestore_repo.dart';
 import '../domain/motor_invernadero.dart';
 import '../domain/movimiento.dart';
@@ -320,230 +321,182 @@ class _InicioTabState extends State<InicioTab> {
     return estados;
   }
 
-  /// Construye el bloque ACCIÓN con botones para registrar operaciones
+  /// Construye el bloque de accesos rápidos (lista compacta)
   Widget _buildBloqueAccion(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Acción',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+    final accentColor = Theme.of(context).colorScheme.primary;
+    final textStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+      fontSize: 15,
+      fontWeight: FontWeight.w600,
+      color: AppColors.textPrimary,
+    );
+
+    Widget _quickTile({
+      required IconData icon,
+      required String label,
+      required VoidCallback onPressed,
+    }) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 11),
+            child: Row(
+              children: [
+                Icon(icon, size: 22, color: accentColor),
+                const SizedBox(width: 12),
+                Expanded(child: Text(label, style: textStyle)),
+              ],
             ),
-            const SizedBox(height: 16),
-            // Botón Registrar Siembra
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => SiembraNuevaScreen(
-                        motor: widget.motor,
-                        firestoreRepo: widget.firestoreRepo,
-                      ),
-                    ),
-                  ).then((_) {
-                    setState(() {});
-                    _cargarAlertasYCoberturas();
-                    _cargarSugerenciasSiembra();
-                  });
-                },
-                icon: const Icon(Icons.add),
-                label: const Text('+ Registrar siembra'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            // Botón Registrar Venta
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => VentasScreen(motor: widget.motor, firestoreRepo: widget.firestoreRepo),
-                    ),
-                  ).then((_) {
-                    setState(() {});
-                    _cargarSugerenciasSiembra();
-                  });
-                },
-                icon: const Icon(Icons.shopping_cart),
-                label: const Text('+ Registrar venta'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            // Botón Registrar Traspaso
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => TraspasoScreen(
-                        motor: widget.motor,
-                        firestoreRepo: widget.firestoreRepo,
-                      ),
-                    ),
-                  ).then((_) {
-                    setState(() {});
-                    _cargarSugerenciasSiembra();
-                  });
-                },
-                icon: const Icon(Icons.swap_horiz),
-                label: const Text('+ Registrar traspaso'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            // Botón Registrar Merma
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => MermaScreen(
-                        motor: widget.motor,
-                        firestoreRepo: widget.firestoreRepo,
-                      ),
-                    ),
-                  ).then((_) {
-                    setState(() {});
-                    _cargarSugerenciasSiembra();
-                  });
-                },
-                icon: const Icon(Icons.remove_circle_outline),
-                label: const Text('+ Registrar merma'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            // Botón Registrar Gasto
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => GastosScreen(
-                        firestoreRepo: widget.firestoreRepo,
-                      ),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.payments),
-                label: const Text('Registrar gasto'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            // Botón Resumen económico
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => ResumenEconomicoScreen(
-                        firestoreRepo: widget.firestoreRepo,
-                      ),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.insights),
-                label: const Text('Resumen económico'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            // Botón Clientes
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => ClientesScreen(
-                        firestoreRepo: widget.firestoreRepo,
-                      ),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.people),
-                label: const Text('Clientes'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            // Botón Cuentas por cobrar
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => CuentasPorCobrarScreen(
-                        firestoreRepo: widget.firestoreRepo,
-                      ),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.receipt_long),
-                label: const Text('Cuentas por cobrar'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            // Botón Resúmenes de cobro
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => ResumenesCobroScreen(
-                        firestoreRepo: widget.firestoreRepo,
-                      ),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.description),
-                label: const Text('Resúmenes de cobro'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
+      );
+    }
+
+    return Container(
+      decoration: _cardDecorationPastel(context, AppPastel.ventas),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Accesos rápidos',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+              letterSpacing: 0.2,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _quickTile(
+            icon: Icons.add_circle_outline,
+            label: 'Registrar siembra',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => SiembraNuevaScreen(
+                    motor: widget.motor,
+                    firestoreRepo: widget.firestoreRepo,
+                  ),
+                ),
+              ).then((_) {
+                setState(() {});
+                _cargarAlertasYCoberturas();
+                _cargarSugerenciasSiembra();
+              });
+            },
+          ),
+          _quickTile(
+            icon: Icons.shopping_cart_outlined,
+            label: 'Registrar venta',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => VentasScreen(motor: widget.motor, firestoreRepo: widget.firestoreRepo),
+                ),
+              ).then((_) {
+                setState(() {});
+                _cargarSugerenciasSiembra();
+              });
+            },
+          ),
+          _quickTile(
+            icon: Icons.swap_horiz,
+            label: 'Registrar traspaso',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => TraspasoScreen(
+                    motor: widget.motor,
+                    firestoreRepo: widget.firestoreRepo,
+                  ),
+                ),
+              ).then((_) {
+                setState(() {});
+                _cargarSugerenciasSiembra();
+              });
+            },
+          ),
+          _quickTile(
+            icon: Icons.remove_circle_outline,
+            label: 'Registrar merma',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => MermaScreen(
+                    motor: widget.motor,
+                    firestoreRepo: widget.firestoreRepo,
+                  ),
+                ),
+              ).then((_) {
+                setState(() {});
+                _cargarSugerenciasSiembra();
+              });
+            },
+          ),
+          _quickTile(
+            icon: Icons.payments_outlined,
+            label: 'Registrar gasto',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => GastosScreen(firestoreRepo: widget.firestoreRepo),
+                ),
+              );
+            },
+          ),
+          _quickTile(
+            icon: Icons.insights_outlined,
+            label: 'Resumen económico',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => ResumenEconomicoScreen(firestoreRepo: widget.firestoreRepo),
+                ),
+              );
+            },
+          ),
+          _quickTile(
+            icon: Icons.people_outline,
+            label: 'Clientes',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => ClientesScreen(firestoreRepo: widget.firestoreRepo),
+                ),
+              );
+            },
+          ),
+          _quickTile(
+            icon: Icons.receipt_long_outlined,
+            label: 'Cuentas por cobrar',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => CuentasPorCobrarScreen(firestoreRepo: widget.firestoreRepo),
+                ),
+              );
+            },
+          ),
+          _quickTile(
+            icon: Icons.description_outlined,
+            label: 'Resúmenes de cobro',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => ResumenesCobroScreen(firestoreRepo: widget.firestoreRepo),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
 
-  /// Widget helper para crear módulos con header consistente
+  /// Widget helper para crear módulos con header consistente y fondo pastel por tipo
   Widget _buildModuleCard({
     required BuildContext context,
     required String title,
@@ -551,27 +504,28 @@ class _InicioTabState extends State<InicioTab> {
     required Widget child,
     Widget? trailing,
     VoidCallback? onTap,
+    PastelVariant pastel = AppPastel.neutral,
   }) {
     final content = Padding(
-      padding: const EdgeInsets.all(14.0),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
-                  Icon(
-                    icon,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: 26,
-                  ),
-                  const SizedBox(width: 10),
+                  Icon(icon, color: pastel.accent, size: 22),
+                  const SizedBox(width: 8),
                   Text(
                     title,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                      letterSpacing: 0.2,
+                      fontSize: 15,
                     ),
                   ),
                 ],
@@ -579,52 +533,46 @@ class _InicioTabState extends State<InicioTab> {
               if (trailing != null) trailing,
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           child,
         ],
       ),
     );
 
-    if (onTap != null) {
-      return Card(
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: content,
-        ),
-      );
-    }
-
-    return Card(child: content);
+    final container = Container(
+      decoration: _cardDecorationPastel(context, pastel),
+      child: onTap != null
+          ? Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(12),
+                child: content,
+              ),
+            )
+          : content,
+    );
+    return container;
   }
 
   Widget _buildCardSiembras(BuildContext context) {
     final siembrasHoy = _contarSiembrasHoy();
     final siembrasPorCultivo = _contarSiembrasHoyPorCultivo();
+    const pastel = AppPastel.siembras;
 
     final badge = Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 6,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(20),
+        color: pastel.accent.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
-        children: [
-          Text(
-            'Hoy: ',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          Text(
-            siembrasHoy.toString(),
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
-            ),
-          ),
-        ],
+      child: Text(
+        'Hoy: $siembrasHoy',
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+          color: pastel.accent,
+          fontSize: 13,
+        ),
       ),
     );
 
@@ -632,6 +580,7 @@ class _InicioTabState extends State<InicioTab> {
       context: context,
       title: 'Siembras',
       icon: Icons.eco,
+      pastel: pastel,
       trailing: badge,
       onTap: () {
         Navigator.of(context).push(
@@ -640,17 +589,21 @@ class _InicioTabState extends State<InicioTab> {
           ),
         );
       },
-      child: Text(
-        CultivoKeys.todas
-            .map((cultivoKey) {
-              final cantidad = siembrasPorCultivo[cultivoKey] ?? 0;
-              final label = CultivoLabels.obtenerLabel(cultivoKey);
-              return '$label: $cantidad';
-            })
-            .join('  |  '),
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Colors.grey[700],
-        ),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        children: CultivoKeys.todas.map((cultivoKey) {
+          final cantidad = siembrasPorCultivo[cultivoKey] ?? 0;
+          final label = CultivoLabels.obtenerLabel(cultivoKey);
+          return Text(
+            '$label: $cantidad',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.textSecondary,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -659,8 +612,14 @@ class _InicioTabState extends State<InicioTab> {
     return _buildModuleCard(
       context: context,
       title: 'Flujo',
-      icon: Icons.timeline,
+      icon: Icons.timeline_outlined,
+      pastel: AppPastel.sugerencia,
       trailing: TextButton(
+        style: TextButton.styleFrom(
+          minimumSize: Size.zero,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
         onPressed: () {
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -668,7 +627,14 @@ class _InicioTabState extends State<InicioTab> {
             ),
           );
         },
-        child: const Text('Abrir'),
+        child: Text(
+          'Abrir',
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: Theme.of(context).colorScheme.primary,
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+        ),
       ),
       onTap: () {
         Navigator.of(context).push(
@@ -679,105 +645,90 @@ class _InicioTabState extends State<InicioTab> {
       },
       child: Text(
         '7D / 30D',
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: Colors.grey[700],
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: AppColors.textSecondary,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
   }
 
   Widget _buildCardSugerenciaSiembra(BuildContext context) {
+    final theme = Theme.of(context);
     Widget content;
 
     if (_cargandoSugerencias && _sugerencias.isEmpty) {
       content = const Center(
         child: Padding(
-          padding: EdgeInsets.all(8.0),
-          child: CircularProgressIndicator(strokeWidth: 2),
+          padding: EdgeInsets.symmetric(vertical: 12),
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
         ),
       );
     } else if (_errorSugerencias != null && _sugerencias.isEmpty) {
       content = Text(
         _errorSugerencias!,
-        style: Theme.of(context)
-            .textTheme
-            .bodySmall
-            ?.copyWith(color: Colors.red),
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: Colors.red.shade700,
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+        ),
       );
     } else {
       content = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: CultivoKeys.todas.map((cultivoKey) {
           final s = _sugerencias[cultivoKey];
           final label = CultivoLabels.obtenerLabel(cultivoKey);
+          final bodyStyle = theme.textTheme.bodySmall?.copyWith(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          );
 
           if (s == null) {
             return Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Text(
-                '$label: sin datos de ventas recientes',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text('$label: sin datos de ventas recientes', style: bodyStyle),
             );
           }
 
+          Color estadoColor = AppColors.textSecondary;
+          if (s.estado == 'Sembrar ahora') estadoColor = Colors.red.shade700;
+          else if (s.estado == 'Vigilar') estadoColor = Colors.orange.shade700;
+          else if (s.estado == 'Bien por ahora') estadoColor = Colors.green.shade700;
+
           return Padding(
-            padding: const EdgeInsets.only(bottom: 12.0),
+            padding: const EdgeInsets.only(bottom: 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   label,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 if (s.ventas28Dias == 0) ...[
-                  Text(
-                    'Sin ventas recientes',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  Text(
-                    'Stock vendible: ${s.stockVendible} u. | En proceso: ${s.stockEnProceso} u.',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  Text(
-                    'Sugerencia de siembra: 0 u.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
+                  Text('Sin ventas recientes', style: bodyStyle),
+                  Text('Stock: ${s.stockVendible} u. vendible | ${s.stockEnProceso} u. en proceso', style: bodyStyle),
+                  Text('Sugerencia: 0 u.', style: bodyStyle?.copyWith(fontWeight: FontWeight.w700)),
                 ] else ...[
-                  Text(
-                    'Demanda semanal: ${s.demandaSemanalPromedio.toStringAsFixed(1)} u.',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  Text(
-                    'Stock vendible: ${s.stockVendible} u. | En proceso: ${s.stockEnProceso} u.',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  Text(
-                    'Cobertura total: ${s.coberturaTotalSemanas.toStringAsFixed(1)} semanas',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  Text(
-                    'Sugerencia de siembra: ${s.siembraSugerida} u.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
+                  Text('Demanda sem.: ${s.demandaSemanalPromedio.toStringAsFixed(1)} u.', style: bodyStyle),
+                  Text('Stock: ${s.stockVendible} u. vendible | ${s.stockEnProceso} u. en proceso', style: bodyStyle),
+                  Text('Cobertura: ${s.coberturaTotalSemanas.toStringAsFixed(1)} sem.', style: bodyStyle),
+                  Text('Sugerencia: ${s.siembraSugerida} u.', style: bodyStyle?.copyWith(fontWeight: FontWeight.w700)),
                 ],
-                Text(
-                  'Estado: ${s.estado}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: s.estado == 'Sembrar ahora'
-                            ? Colors.red
-                            : s.estado == 'Vigilar'
-                                ? Colors.orange[700]
-                                : Colors.green[700],
-                      ),
-                ),
+                Text('Estado: ${s.estado}', style: bodyStyle?.copyWith(color: estadoColor)),
               ],
             ),
           );
@@ -788,7 +739,8 @@ class _InicioTabState extends State<InicioTab> {
     return _buildModuleCard(
       context: context,
       title: 'Sugerencia de siembra',
-      icon: Icons.spa,
+      icon: Icons.spa_outlined,
+      pastel: AppPastel.sugerencia,
       child: content,
     );
   }
@@ -796,8 +748,8 @@ class _InicioTabState extends State<InicioTab> {
   Widget _buildCardAlertaSiembras(BuildContext context) {
     final estados = _calcularEstadoSiembrasHoyPorCultivo();
     final todosOk = estados.values.every((e) => e['estado'] == 'ok');
+    final theme = Theme.of(context);
 
-    // Filtrar cultivos con meta > 0 para evitar ruido
     final cultivosConMeta = CultivoKeys.todas.where((cultivoKey) {
       final estado = estados[cultivoKey]!;
       final meta = estado['meta'] as int;
@@ -808,17 +760,22 @@ class _InicioTabState extends State<InicioTab> {
     if (todosOk) {
       content = Row(
         children: [
-          const Text('✅'),
+          Icon(Icons.check_circle_outline, size: 20, color: theme.colorScheme.primary),
           const SizedBox(width: 8),
           Text(
             'Siembras de hoy en meta',
-            style: Theme.of(context).textTheme.bodyMedium,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: AppColors.textSecondary,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       );
     } else {
       content = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: cultivosConMeta.map((cultivoKey) {
           final estado = estados[cultivoKey]!;
           final siembras = estado['siembras'] as int;
@@ -827,22 +784,21 @@ class _InicioTabState extends State<InicioTab> {
           final label = CultivoLabels.obtenerLabel(cultivoKey);
 
           return Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
+            padding: const EdgeInsets.only(bottom: 6),
             child: Row(
               children: [
-                Text(
-                  esOk ? '✓' : '!',
-                  style: TextStyle(
-                    color: esOk ? Colors.green : Colors.orange,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
+                Icon(
+                  esOk ? Icons.check_circle_outline : Icons.info_outline,
+                  size: 18,
+                  color: esOk ? Colors.green.shade700 : Colors.orange.shade700,
                 ),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '$label: $siembras / $meta',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                Text(
+                  '$label: $siembras / $meta',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -855,7 +811,8 @@ class _InicioTabState extends State<InicioTab> {
     return _buildModuleCard(
       context: context,
       title: 'Alerta siembras (hoy)',
-      icon: Icons.notifications,
+      icon: Icons.notifications_outlined,
+      pastel: AppPastel.stock,
       child: content,
     );
   }
@@ -893,15 +850,72 @@ class _InicioTabState extends State<InicioTab> {
     }
   }
 
+  /// Estilo común para tarjetas: borde suave, radio consistente, sombra muy suave
+  static BoxDecoration _cardDecoration(BuildContext context) {
+    return BoxDecoration(
+      color: AppPastel.neutral.background,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: AppPastel.neutral.border, width: 1),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.04),
+          blurRadius: 8,
+          offset: const Offset(0, 1),
+        ),
+      ],
+    );
+  }
+
+  /// Tarjeta con fondo pastel por tipo de módulo (siembras, ventas, stock, sugerencia, neutral)
+  static BoxDecoration _cardDecorationPastel(BuildContext context, PastelVariant pastel) {
+    return BoxDecoration(
+      color: pastel.background,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: pastel.border, width: 1),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.04),
+          blurRadius: 8,
+          offset: const Offset(0, 1),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('Invernadero MVP'),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Invernadero',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            Text(
+              'Panel de hoy',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        iconTheme: IconThemeData(color: colorScheme.onSurface),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings),
+            icon: const Icon(Icons.settings_outlined),
             tooltip: 'Ajustes',
             onPressed: () {
               Navigator.of(context)
@@ -911,7 +925,6 @@ class _InicioTabState extends State<InicioTab> {
                     ),
                   )
                   .then((_) {
-                    // Recargar alertas y coberturas cuando se regresa de Ajustes
                     _cargarAlertasYCoberturas();
                   });
             },
@@ -919,7 +932,7 @@ class _InicioTabState extends State<InicioTab> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -997,24 +1010,16 @@ class _InicioTabState extends State<InicioTab> {
             ),
           if (_errorValidacion != null) const SizedBox(height: 16),
           
-          // ========== BLOQUE ACCIÓN ==========
           _buildBloqueAccion(context),
-          const SizedBox(height: 16),
-          
-          // ========== MÓDULO SIEMBRAS ==========
+          const SizedBox(height: 10),
           _buildCardSiembras(context),
-          const SizedBox(height: 12),
-          
-          // ========== MÓDULO ALERTA SIEMBRAS ==========
+          const SizedBox(height: 10),
           _buildCardAlertaSiembras(context),
-          const SizedBox(height: 12),
-          
-          // ========== MÓDULO SUGERENCIA SIEMBRA ==========
+          const SizedBox(height: 10),
           _buildCardSugerenciaSiembra(context),
-          const SizedBox(height: 12),
-          
-          // ========== MÓDULO FLUJO ==========
+          const SizedBox(height: 10),
           _buildCardFlujo(context),
+          const SizedBox(height: 16),
           ],
         ),
       ),

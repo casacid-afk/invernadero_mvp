@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
 import '../data/invernadero_firestore_repo.dart';
 
 class ClientesScreen extends StatefulWidget {
@@ -174,9 +175,11 @@ class _ClientesScreenState extends State<ClientesScreen> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('Clientes'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: _cargando
+      body: Container(
+        color: AppPastel.ventas.background,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: _cargando
             ? const Center(child: CircularProgressIndicator())
             : _error != null
                 ? Center(
@@ -222,6 +225,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
                           );
                         },
                       ),
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _mostrarDialogoNuevoCliente,

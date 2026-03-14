@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../theme/app_theme.dart';
+import '../widgets/pastel_section_card.dart';
 import '../data/invernadero_firestore_repo.dart';
 import '../domain/motor_invernadero.dart';
 import '../domain/cultivos.dart';
@@ -284,12 +286,14 @@ class _VentasScreenState extends State<VentasScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Selector de cultivo
+        child: PastelSectionCard(
+          pastel: AppPastel.ventas,
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Selector de cultivo
               DropdownButtonFormField<String>(
                 value: _cultivoSeleccionado,
                 decoration: const InputDecoration(
@@ -328,31 +332,32 @@ class _VentasScreenState extends State<VentasScreen> {
 
               // Información de stock para el cultivo seleccionado
               if (cultivoSeleccionado != null)
-                Card(
-                  color: Theme.of(context).colorScheme.surfaceVariant,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Stock seleccionado',
-                          style: Theme.of(context).textTheme.titleSmall,
+                PastelSectionCard(
+                  pastel: AppPastel.ventas,
+                  title: 'Stock seleccionado',
+                  icon: Icons.inventory_2,
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Total: $stockTotalSeleccionado unidades',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textPrimary,
                         ),
-                        const SizedBox(height: 8),
-                        Text('Total: $stockTotalSeleccionado unidades'),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Disponible para venta (etapa final): $stockDisponibleVentaSeleccionado unidades',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: stockDisponibleVentaSeleccionado > 0
-                                ? Theme.of(context).colorScheme.primary
-                                : Colors.red,
-                          ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Disponible para venta (etapa final): $stockDisponibleVentaSeleccionado unidades',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: stockDisponibleVentaSeleccionado > 0
+                              ? AppPastel.ventas.accent
+                              : Colors.red,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               if (cultivoSeleccionado != null) const SizedBox(height: 16),
@@ -564,6 +569,7 @@ class _VentasScreenState extends State<VentasScreen> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

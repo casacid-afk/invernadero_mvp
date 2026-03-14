@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_theme.dart';
+import '../../widgets/pastel_section_card.dart';
 import '../../data/invernadero_firestore_repo.dart';
 import '../../domain/cultivos.dart';
 import '../../domain/motor_invernadero.dart';
@@ -198,29 +200,56 @@ class _SiembraNuevaScreenState extends State<SiembraNuevaScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final fechaLabel =
         '${_fecha.day.toString().padLeft(2, '0')}-${_fecha.month.toString().padLeft(2, '0')}-${_fecha.year}';
 
+    final labelStyle = theme.textTheme.labelLarge?.copyWith(
+      fontWeight: FontWeight.w600,
+      fontSize: 15,
+      color: AppColors.textPrimary,
+    );
+    final inputTextStyle = theme.textTheme.bodyLarge?.copyWith(
+      fontWeight: FontWeight.w600,
+      fontSize: 16,
+      color: AppColors.textPrimary,
+    );
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Nueva siembra')),
-      body: Padding(
+      appBar: AppBar(
+        title: Text(
+          'Nueva siembra',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+            fontSize: 20,
+          ),
+        ),
+      ),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
+        child: PastelSectionCard(
+          pastel: AppPastel.siembras,
+          child: Form(
+            key: _formKey,
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Fecha
-              Text('Fecha', style: Theme.of(context).textTheme.labelLarge),
+              Text('Fecha', style: labelStyle),
               const SizedBox(height: 8),
               InkWell(
                 onTap: () => _seleccionarFecha(context),
                 child: InputDecorator(
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.calendar_today),
+                  decoration: InputDecoration(
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.calendar_today),
+                    labelStyle: labelStyle,
                   ),
-                  child: Text(fechaLabel),
+                  child: Text(
+                    fechaLabel,
+                    style: inputTextStyle,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -228,15 +257,22 @@ class _SiembraNuevaScreenState extends State<SiembraNuevaScreen> {
               // Cultivo
               DropdownButtonFormField<String>(
                 value: _cultivoKey,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Cultivo',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.eco),
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.eco),
+                  labelStyle: labelStyle,
+                  floatingLabelStyle: labelStyle,
                 ),
+                dropdownColor: theme.scaffoldBackgroundColor,
+                style: inputTextStyle,
                 items: CultivoKeys.todas.map((cultivoKey) {
                   return DropdownMenuItem<String>(
                     value: cultivoKey,
-                    child: Text(CultivoLabels.obtenerLabel(cultivoKey)),
+                    child: Text(
+                      CultivoLabels.obtenerLabel(cultivoKey),
+                      style: inputTextStyle,
+                    ),
                   );
                 }).toList(),
                 validator: (value) {
@@ -257,10 +293,13 @@ class _SiembraNuevaScreenState extends State<SiembraNuevaScreen> {
               TextFormField(
                 controller: _cantidadController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
+                style: inputTextStyle,
+                decoration: InputDecoration(
                   labelText: 'Cantidad',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.format_list_numbered),
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.format_list_numbered),
+                  labelStyle: labelStyle,
+                  floatingLabelStyle: labelStyle,
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -282,10 +321,13 @@ class _SiembraNuevaScreenState extends State<SiembraNuevaScreen> {
                 width: double.infinity,
                 child: FilledButton.icon(
                   onPressed: _guardando ? null : _guardar,
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
                   icon: _guardando
                       ? const SizedBox(
-                          width: 16,
-                          height: 16,
+                          width: 20,
+                          height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation<Color>(
@@ -293,12 +335,20 @@ class _SiembraNuevaScreenState extends State<SiembraNuevaScreen> {
                             ),
                           ),
                         )
-                      : const Icon(Icons.save),
-                  label: Text(_guardando ? 'Guardando...' : 'Guardar'),
+                      : const Icon(Icons.save, size: 22),
+                  label: Text(
+                    _guardando ? 'Guardando...' : 'Guardar',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 17,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
+        ),
         ),
       ),
     );

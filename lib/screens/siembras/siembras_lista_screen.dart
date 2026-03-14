@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_theme.dart';
 import '../../domain/motor_invernadero.dart';
 import '../../domain/movimiento.dart';
 import '../../domain/lote.dart';
@@ -88,9 +89,11 @@ class _SiembrasListaScreenState extends State<SiembrasListaScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Siembras')),
-      body: Column(
-        children: [
-          // Filtro rápido
+      body: Container(
+        color: AppPastel.siembras.background,
+        child: Column(
+          children: [
+            // Filtro rápido
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: SegmentedButton<FiltroSiembras>(
@@ -185,6 +188,7 @@ class _SiembrasListaScreenState extends State<SiembrasListaScreen> {
                   ),
           ),
         ],
+        ),
       ),
     );
   }
